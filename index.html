@@ -229,7 +229,7 @@ const TIME_T=[
   {id:"giorno",label:"Giorno",ico:"☀️",bg:"#FFF3E0",col:"#854F0B",mode:"day"},
   {id:"notte",label:"Notte",ico:"🌜",bg:"#EEEDFE",col:"#534AB7",mode:"day"}
 ];
-const SLEEP_T=[{id:"notturno",label:"Sonno notturno"},{id:"pisolino",label:"Pisolino"}];
+const SLEEP_T=[{id:"pisolino",label:"Pisolino"},{id:"notturno",label:"Sonno notturno"}];
 const DAY_NAMES=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
 const MONTH_NAMES=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const CATS={
@@ -415,7 +415,7 @@ function switchTab(t){curTab=t;TABS.forEach(k=>{document.getElementById("tab-"+k
 function selectCat(c){
   curCat=c;const n=nowTStr();const d=todayISO();
   if(c==="cibo")formState={date:d,time:n,foods:[{type:sortedFoods()[0],grams:""}],note:""};
-  else if(c==="sonno")formState={date:d,sleepType:"notturno",sleepStart:n,sleepEnd:"",note:""};
+  else if(c==="sonno")formState={date:d,sleepType:"pisolino",sleepStart:n,sleepEnd:"",note:""};
   else if(c==="cacca")formState={date:d,time:n,poopType:POOP_T[0],note:""};
   else if(c==="visita")formState={date:d,showTime:false,time:n,visitType:VISIT_T[0],note:""};
   else if(c==="malattia")formState={date:d,showTime:false,time:n,illnessType:ILL_T[0],temp:"",note:""};
@@ -462,27 +462,15 @@ function renderAgenda(){
     const d=new Date(start);d.setDate(d.getDate()+i);
     const iso=fmtISO(d);const isT=iso===tISO;
     const dA=appointments.filter(a=>a.date===iso).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-    const dT=entries.filter(e=>e.category==="tempo"&&e.date===iso);
     const dS=entries.filter(e=>e.category==="spesa"&&e.date===iso);
-    const dV=entries.filter(e=>e.category==="visita"&&e.date===iso);
-    const dM=entries.filter(e=>e.category==="malattia"&&e.date===iso);
     const dN=entries.filter(e=>e.category==="nota"&&e.date===iso);
-    const dSl=entries.filter(e=>e.category==="sonno"&&e.date===iso);
-    const dC=entries.filter(e=>e.category==="cibo"&&e.date===iso);
-    const dCa=entries.filter(e=>e.category==="cacca"&&e.date===iso);
-    const hasAny=dA.length||dT.length||dS.length||dV.length||dM.length||dN.length||dSl.length||dC.length||dCa.length;
+    const hasAny=dA.length||dS.length||dN.length;
     h+=`<div class="daycol${isT?" today":""}"><div class="dayhdr"><span>${DAY_NAMES[i]}</span><span style="font-weight:400;opacity:.75">${d.toLocaleDateString("it-IT",{day:"numeric",month:"short"})}${isT?" · oggi":""}</span></div>`;
     if(!hasAny)h+=`<div class="empty">---</div>`;
     else{
       dA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div><button class="dbtn" data-delappt="${a.id}">${E.del}</button></div>`);
-      dV.forEach(e=>h+=`<div class="apptext" style="background:#E1F5EE;color:#0F6E56">🩺 ${esc(e.visitType||"Visita")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
-      dM.forEach(e=>h+=`<div class="apptext" style="background:#FCEBEB;color:#A32D2D">🤒 ${esc(e.illnessType||"")}${e.temp?" · "+e.temp+"°":""}</div>`);
       dN.forEach(e=>h+=`<div class="apptext" style="background:#F1EFE8;color:#5F5E5A">📝 ${esc(e.description||e.note||"Nota")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
-      dT.forEach(e=>{const t=TIME_T.find(x=>x.id===e.timeType);if(!t)return;const l=t.mode==="day"?t.label+" intero":t.label+" · "+(e.hours||0)+UNITS.tempo;h+=`<div class="apptext" style="background:${t.bg};color:${t.col}">${t.ico} ${l}</div>`;});
       dS.forEach(e=>h+=`<div class="apptext" style="background:#E8F5E0;color:#3D7A1C">🛒 ${e.note?esc(e.note):"Spesa"}</div>`);
-      dSl.forEach(e=>{const st=SLEEP_T.find(t=>t.id===e.sleepType);h+=`<div class="apptext" style="background:#EEEDFE;color:#534AB7">🌙 ${st?st.label:""} ${e.sleepStart||""} → ${e.sleepEnd||"in corso"}</div>`;});
-      dC.forEach(e=>{const desc=e.foods?e.foods.map(f=>f.type).join(", "):"";h+=`<div class="apptext" style="background:#FAEEDA;color:#854F0B">🍎 ${e.time||""} ${desc}</div>`;});
-      dCa.forEach(e=>h+=`<div class="apptext" style="background:#FAECE7;color:#993C1D">💩 ${e.time||""} ${e.poopType||""}</div>`);
     }
     h+=`</div>`;
   }
@@ -586,18 +574,30 @@ function changeMonth(d){monthOffset+=d;render();}
 function renderStats(){
   const mE=entries.filter(e=>inMonth(e.date,monthOffset));
   const slE=mE.filter(e=>e.category==="sonno"&&e.sleepEnd),pE=mE.filter(e=>e.category==="cacca"),fE=mE.filter(e=>e.category==="cibo"),teE=mE.filter(e=>e.category==="tempo");
-  const slMins=slE.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
-  const totSlM=slMins.reduce((a,b)=>a+b,0),avgSlM=slMins.length?totSlM/slMins.length:0;
-  const totSlH=(totSlM/60).toFixed(1),avgH=Math.floor(avgSlM/60),avgM=Math.round(avgSlM%60);
+  // Sonno diviso per tipo
+  const slNotte=slE.filter(e=>e.sleepType==="notturno");
+  const slPiso=slE.filter(e=>e.sleepType==="pisolino");
+  const notMins=slNotte.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
+  const pisMins=slPiso.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
+  const totNotM=notMins.reduce((a,b)=>a+b,0),avgNotM=notMins.length?totNotM/notMins.length:0;
+  const totPisM=pisMins.reduce((a,b)=>a+b,0),avgPisM=pisMins.length?totPisM/pisMins.length:0;
+  const totNotH=(totNotM/60).toFixed(1),avgNotH=Math.floor(avgNotM/60),avgNotMn=Math.round(avgNotM%60);
+  const totPisH=(totPisM/60).toFixed(1),avgPisH=Math.floor(avgPisM/60),avgPisMn=Math.round(avgPisM%60);
   const days=new Set(mE.map(e=>e.date).filter(Boolean)).size||1;const ppd=(pE.length/days).toFixed(1);
   const fc={};fE.forEach(e=>(e.foods||[]).forEach(f=>{fc[f.type]=(fc[f.type]||0)+1;}));
   const topF=Object.entries(fc).sort((a,b)=>b[1]-a[1]).slice(0,10);const maxF=topF.length?topF[0][1]:1;
   let tG=0,tN=0,tO=0;teE.forEach(e=>{const t=TIME_T.find(x=>x.id===e.timeType);if(!t)return;if(t.id==="giorno")tG++;else if(t.id==="notte")tN++;else tO+=(Number(e.hours)||0);});
   const ref=new Date();ref.setMonth(ref.getMonth()+monthOffset);const ml=`${MONTH_NAMES[ref.getMonth()]} ${ref.getFullYear()}`;const isCur=monthOffset===0;
   let h=`<div class="monthnav"><button class="wkbtn" data-monthnav="-1">${E.back}</button><div class="wklabel">${ml}${isCur?" <span style='font-weight:400;color:var(--text-faint);font-size:11px'>(in corso)</span>":""}</div><button class="wkbtn" data-monthnav="1" ${monthOffset>=0?'style="opacity:.3;pointer-events:none"':""}>${E.fwd}</button></div>`;
+  h+=`<div class="sectiontitle">🌙 Sonno notturno</div><div class="statgrid">
+    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🌙 Totale/mese</div><div><div class="sval">${totNotH}${UNITS.sonno}</div><div class="ssub">${slNotte.length} notti</div></div></div>
+    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🕐 Media/notte</div><div><div class="sval">${avgNotH}h ${avgNotMn}m</div><div class="ssub">per notte</div></div></div>
+  </div>`;
+  h+=`<div class="sectiontitle">😴 Pisolini</div><div class="statgrid">
+    <div class="statcard" style="background:#FDF0E3;color:#B5530F"><div class="slabel">😴 Totale/mese</div><div><div class="sval">${totPisH}${UNITS.sonno}</div><div class="ssub">${slPiso.length} pisolini</div></div></div>
+    <div class="statcard" style="background:#FDF0E3;color:#B5530F"><div class="slabel">🕐 Media/pisolino</div><div><div class="sval">${avgPisH}h ${avgPisMn}m</div><div class="ssub">per pisolino</div></div></div>
+  </div>`;
   h+=`<div class="sectiontitle">🍼 Cura quotidiana</div><div class="statgrid">
-    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🌙 Sonno/mese</div><div><div class="sval">${totSlH}${UNITS.sonno}</div><div class="ssub">${slE.length} periodi</div></div></div>
-    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🕐 Media sonno</div><div><div class="sval">${avgH}h ${avgM}m</div><div class="ssub">per periodo</div></div></div>
     <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">💩 Cacca/mese</div><div><div class="sval">${pE.length}</div><div class="ssub">volte</div></div></div>
     <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">📊 Cacca/giorno</div><div><div class="sval">${ppd}</div><div class="ssub">media</div></div></div>
   </div>`;

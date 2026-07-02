@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-title" content="Allegra">
 <meta name="theme-color" content="#D4537E">
 <title>Allegra · Diario</title>
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Allegra%22%2C%22short_name%22%3A%22Allegra%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23FAF9F6%22%2C%22theme_color%22%3A%22%23D4537E%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22icon.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
 <style>
 :root{
   --bg:#FAF9F6;--surface:#FFFFFF;--border:#E5E2D9;--border-soft:#EFEDE5;
@@ -199,7 +202,7 @@ textarea{height:68px;resize:none}
 <div id="modalRoot"></div>
 <div id="sleepEndModalRoot"></div>
 <div id="editModalRoot"></div>
-<script type="module" crossorigin="anonymous">
+<script type="module">
 const firebaseConfig = {
   apiKey: "AIzaSyADkIKHE5yXKhQTcpyOdNuLSd9dcRvg4h0",
   authDomain: "allegra-18a3e.firebaseapp.com",
@@ -262,6 +265,7 @@ function fmtD(iso){if(!iso)return"";const p=iso.split("-");return parseInt(p[2])
 function getPeriod(time){if(!time)return"mattino";const h=parseInt(time.split(":")[0]);if(h<6)return"notte";if(h<12)return"mattino";if(h<18)return"pomeriggio";return"sera";}
 function nowTStr(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
 function esc(s){const d=document.createElement("div");d.textContent=s||"";return d.innerHTML;}
+function sortedFoods(){return [...FOOD_T].sort((a,b)=>a.localeCompare(b,"it"));}
 function inMonth(dateStr,off){
   if(!dateStr)return false;
   const ref=new Date();ref.setMonth(ref.getMonth()+off);
@@ -375,19 +379,19 @@ function renderEditModal(){
     h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
     h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${editForm.time||""}" data-editupd="time" style="max-width:140px"></div>`;
     h+=`<div class="frow"><div style="font-size:11px;color:var(--text-faint);margin-bottom:6px">Alimenti</div><div class="food-items">`;
-    (editForm.foods||[]).forEach((f,i)=>{h+=`<div style="display:grid;grid-template-columns:1fr 74px 32px;gap:6px;align-items:center"><select data-editfood="${i}" data-editfoodkey="type">${sortedFoods().map(t=>`<option value="${t}"${t===f.type?" selected":""}>${t}</option>`).join("")}</select><input type="number" value="${f.grams||""}" placeholder="–" data-editfood="${i}" data-editfoodkey="grams" style="font-size:14px;padding:10px 8px;border:0.5px solid var(--color-border-secondary)"><button style="border:none;background:#FCEBEB;color:#A32D2D;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px" data-rmveditfood="${i}">${E.del}</button></div>`;});
-    h+=`</div><button style="display:flex;align-items:center;gap:5px;padding:10px 12px;border:0.5px dashed var(--color-border-secondary);background:none;font-size:14px;cursor:pointer;color:var(--text-soft);width:100%;border-radius:10px;margin-top:6px;font-family:inherit" id="addEditFood">＋ Alimento</button></div>`;
-    h+=`<div class="frow"><label class="flbl">Note</label><textarea data-editupd="note" style="height:60px;padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit">${esc(editForm.note||"")}</textarea></div>`;
+    (editForm.foods||[]).forEach((f,i)=>{h+=`<div style="display:grid;grid-template-columns:1fr 74px 32px;gap:6px;align-items:center"><select data-editfood="${i}" data-editfoodkey="type">${sortedFoods().map(t=>`<option value="${t}"${t===f.type?" selected":""}>${t}</option>`).join("")}</select><input type="number" value="${f.grams||""}" placeholder="–" data-editfood="${i}" data-editfoodkey="grams" style="font-size:14px;padding:10px 8px;border:0.5px solid var(--border)"><button style="border:none;background:#FCEBEB;color:#A32D2D;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px" data-rmveditfood="${i}">${E.del}</button></div>`;});
+    h+=`</div><button style="display:flex;align-items:center;gap:5px;padding:10px 12px;border:0.5px dashed var(--border);background:none;font-size:14px;cursor:pointer;color:var(--text-soft);width:100%;border-radius:10px;margin-top:6px;font-family:inherit" id="addEditFood">＋ Alimento</button></div>`;
+    h+=`<div class="frow"><label class="flbl">Note</label><textarea data-editupd="note" style="height:60px;padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit">${esc(editForm.note||"")}</textarea></div>`;
   }
   if(editForm.category==="sonno"){
     h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
-    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${SLEEP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:14px;cursor:pointer;background:${editForm.sleepType===t.id?"#EEEDFE":"var(--color-background-primary)"};color:${editForm.sleepType===t.id?"#534AB7":"var(--color-text-secondary)"};font-weight:500;font-family:inherit" data-editsleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
-    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit"></div></div>`;
+    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${SLEEP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--border);font-size:14px;cursor:pointer;background:${editForm.sleepType===t.id?"#EEEDFE":"var(--surface)"};color:${editForm.sleepType===t.id?"#534AB7":"var(--text-soft)"};font-weight:500;font-family:inherit" data-editsleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div></div>`;
   }
   if(editForm.category==="cacca"){
     h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
     h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${editForm.time||""}" data-editupd="time" style="max-width:140px"></div>`;
-    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${POOP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:14px;cursor:pointer;background:${editForm.poopType===t?"#FAECE7":"var(--color-background-primary)"};color:${editForm.poopType===t?"#993C1D":"var(--color-text-secondary)"};font-weight:500;font-family:inherit" data-editpoop="${t}">${t}</button>`).join("")}</div></div>`;
+    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${POOP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--border);font-size:14px;cursor:pointer;background:${editForm.poopType===t?"#FAECE7":"var(--surface)"};color:${editForm.poopType===t?"#993C1D":"var(--text-soft)"};font-weight:500;font-family:inherit" data-editpoop="${t}">${t}</button>`).join("")}</div></div>`;
   }
   
   h+=`<div class="modal-actions"><button class="btn-cancel" id="editCancel">Annulla</button><button class="btn-save" id="editSave">✅ Salva</button></div></div></div>`;
@@ -597,7 +601,7 @@ function renderStats(){
     <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">💩 Cacca/mese</div><div><div class="sval">${pE.length}</div><div class="ssub">volte</div></div></div>
     <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">📊 Cacca/giorno</div><div><div class="sval">${ppd}</div><div class="ssub">media</div></div></div>
   </div>`;
-  h+=`<div class="sectiontitle">⏰ Tempo</div><div style="background:var(--color-background-secondary);border-radius:10px;padding:4px 12px;margin-bottom:20px">
+  h+=`<div class="sectiontitle">⏰ Tempo</div><div style="background:var(--bg);border-radius:10px;padding:4px 12px;margin-bottom:20px">
     <div class="exline"><div class="exicowrap" style="background:#FDF0E3">⏱️</div><div><div class="exlabel">Ore</div></div><div class="exvalue">${tO} <span>${UNITS.tempo}</span></div></div>
     <div class="exline"><div class="exicowrap" style="background:#FFF3E0">☀️</div><div><div class="exlabel">Giorni</div></div><div class="exvalue">${tG} <span>gg</span></div></div>
     <div class="exline"><div class="exicowrap" style="background:#EEEDFE">🌜</div><div><div class="exlabel">Notti</div></div><div class="exvalue">${tN} <span>not.</span></div></div>
@@ -614,7 +618,7 @@ function renderLogSet(){
   let h=`<div class="setsec"><div class="sethdr">🍎 Alimenti personalizzati</div><div class="setsub">Aggiungi o rimuovi tipologie Cibo</div><div class="foodtaglist">`;
   sortedFoods().forEach(f=>{h+=`<span class="foodtag">${esc(f)}<button data-rmvfoodtype="${esc(f)}">✕</button></span>`;});
   h+=`</div><div class="addfoodrow"><input type="text" id="newFoodInput" placeholder="es. Minestrone..." value="${esc(newFoodName)}"><button id="addFoodTypeBtn">＋</button></div></div>`;
-  h+=`<div style="border-top:1px solid var(--color-border-tertiary);margin:20px 0;padding-top:16px"><div class="sethdr" style="margin-bottom:12px">📋 Activity Log</div></div>`;
+  h+=`<div style="border-top:1px solid var(--border-soft);margin:20px 0;padding-top:16px"><div class="sethdr" style="margin-bottom:12px">📋 Activity Log</div></div>`;
   h+=renderLog();
   return h;
 }

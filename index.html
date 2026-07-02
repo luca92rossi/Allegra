@@ -250,7 +250,7 @@ const PERIODS=[
 ];
 let UNITS={cibo:"g",sonno:"h",tempo:"h"};
 let entries=[],appointments=[];
-let curTab="registra",curCat=null,formState={},weekOffset=0,monthOffset=0,apptForm=null,newFoodName="",firstSnap=false,editingEntry=null,editForm=null;
+let curTab="registra",curCat=null,formState={},weekOffset=0,monthOffset=0,dayOffset=0,apptForm=null,newFoodName="",firstSnap=false,editingEntry=null,editForm=null;
 
 // ===== DATE HELPERS =====
 function localISO(d){
@@ -277,6 +277,18 @@ function isEntryToday(e){
   if(!e.date&&e.timestamp&&isoOfTs(e.timestamp)===todayISO())return true;
   return false;
 }
+function dateWithOffset(off){const d=new Date();d.setDate(d.getDate()+off);return localISO(d);}
+function isEntryOnDate(e,iso){
+  if(e.date===iso)return true;
+  if(!e.date&&e.timestamp&&isoOfTs(e.timestamp)===iso)return true;
+  return false;
+}
+function changeDay(d){dayOffset+=d;render();}
+function fmtDayLabel(iso){
+  const p=iso.split("-").map(Number);
+  const d=new Date(p[0],p[1]-1,p[2]);
+  return d.toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
+}
 
 // ===== MIGRAZIONE: calcola date da timestamp vecchi E salva =====
 function ensureDate(e){
@@ -288,10 +300,16 @@ function ensureDate(e){
   return e;
 }
 
-function sleepMinutes(start,end){
+function sleepMinutes(start,end,startDate,endDate){
   if(!start||!end)return 0;
   const[sh,sm]=start.split(":").map(Number);
   const[eh,em]=end.split(":").map(Number);
+  if(startDate&&endDate&&startDate!==endDate){
+    const sd=new Date(startDate+"T"+start);
+    const ed=new Date(endDate+"T"+end);
+    const diff=Math.round((ed-sd)/60000);
+    return diff>0?diff:0;
+  }
   let m=(eh*60+em)-(sh*60+sm);
   if(m<0)m+=1440;
   return m;
@@ -300,7 +318,7 @@ function sleepMinutes(start,end){
 function eDesc(e){
   const foods=sortedFoods();
   if(e.category==="cibo"&&e.foods&&e.foods.length)return e.foods.map(f=>`<span class="food-pill">${esc(f.type)}${f.grams?" · "+f.grams+UNITS.cibo:""}</span>`).join("");
-  if(e.category==="sonno"){const st=SLEEP_T.find(t=>t.id===e.sleepType);const lbl=st?st.label+": ":"";return lbl+(e.sleepStart||"?")+" → "+(e.sleepEnd||"in corso");}
+  if(e.category==="sonno"){const st=SLEEP_T.find(t=>t.id===e.sleepType);const lbl=st?st.label+": ":"";const dateInfo=e.sleepEndDate&&e.date!==e.sleepEndDate?" ("+fmtD(e.date)+" → "+fmtD(e.sleepEndDate)+")":"";return lbl+(e.sleepStart||"?")+" → "+(e.sleepEnd||"in corso")+dateInfo;}
   if(e.category==="cacca")return e.poopType||"Normale";
   if(e.category==="visita"){let s=e.visitType||"";if(e.showTime&&e.time)s+=" · "+e.time;return s;}
   if(e.category==="malattia"){let s=e.illnessType||"";if(e.temp)s+=" · "+e.temp+"°";if(e.showTime&&e.time)s+=" · "+e.time;return s;}
@@ -347,10 +365,21 @@ async function deleteAppt(id){try{await deleteDoc(doc(db,"appointments",id));}ca
 
 // SLEEP END MODAL
 let sleepEndForm=null;
-function openSleepEnd(id){sleepEndForm={id,time:nowTStr()};renderSleepModal();}
+function openSleepEnd(id){
+  const entry=entries.find(e=>e.id===id);
+  const isNot=entry&&entry.sleepType==="notturno";
+  const nd=new Date();if(isNot)nd.setDate(nd.getDate());
+  sleepEndForm={id,time:nowTStr(),date:localISO(nd),isNotturno:isNot};
+  renderSleepModal();
+}
 function closeSleepEnd(){sleepEndForm=null;renderSleepModal();}
-async function confirmSleepEnd(){try{await updateEntry(sleepEndForm.id,{sleepEnd:sleepEndForm.time});showToast("Aggiornato");}catch(e){console.error(e);}sleepEndForm=null;renderSleepModal();}
-function renderSleepModal(){const r=document.getElementById("sleepEndModalRoot");if(!sleepEndForm){r.innerHTML="";return;}r.innerHTML=`<div class="modal-overlay"><div class="modal"><h3>🌙 Ora fine sonno</h3><div class="frow"><input type="time" id="sleepEndT" value="${sleepEndForm.time}"></div><div class="modal-actions"><button class="btn-cancel" id="sleepEndC">Annulla</button><button class="btn-save" id="sleepEndS">✅ Salva</button></div></div></div>`;document.getElementById("sleepEndT").addEventListener("change",e=>sleepEndForm.time=e.target.value);document.getElementById("sleepEndC").addEventListener("click",closeSleepEnd);document.getElementById("sleepEndS").addEventListener("click",confirmSleepEnd);}
+async function confirmSleepEnd(){
+  const updates={sleepEnd:sleepEndForm.time};
+  if(sleepEndForm.isNotturno)updates.sleepEndDate=sleepEndForm.date;
+  try{await updateEntry(sleepEndForm.id,updates);showToast("Aggiornato");}catch(e){console.error(e);}
+  sleepEndForm=null;renderSleepModal();
+}
+function renderSleepModal(){const r=document.getElementById("sleepEndModalRoot");if(!sleepEndForm){r.innerHTML="";return;}let fields=`<div class="frow"><label class="flbl">Ora fine</label><input type="time" id="sleepEndT" value="${sleepEndForm.time}"></div>`;if(sleepEndForm.isNotturno)fields+=`<div class="frow"><label class="flbl">Data risveglio</label><input type="date" id="sleepEndD" value="${sleepEndForm.date}" style="max-width:170px"></div>`;r.innerHTML=`<div class="modal-overlay"><div class="modal"><h3>🌙 Fine sonno</h3>${fields}<div class="modal-actions"><button class="btn-cancel" id="sleepEndC">Annulla</button><button class="btn-save" id="sleepEndS">✅ Salva</button></div></div></div>`;document.getElementById("sleepEndT").addEventListener("change",e=>sleepEndForm.time=e.target.value);const dd=document.getElementById("sleepEndD");if(dd)dd.addEventListener("change",e=>sleepEndForm.date=e.target.value);document.getElementById("sleepEndC").addEventListener("click",closeSleepEnd);document.getElementById("sleepEndS").addEventListener("click",confirmSleepEnd);}
 
 // EDIT MODAL
 function openEdit(id){
@@ -384,9 +413,13 @@ function renderEditModal(){
     h+=`<div class="frow"><label class="flbl">Note</label><textarea data-editupd="note" style="height:60px;padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit">${esc(editForm.note||"")}</textarea></div>`;
   }
   if(editForm.category==="sonno"){
-    h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
     h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${SLEEP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--border);font-size:14px;cursor:pointer;background:${editForm.sleepType===t.id?"#EEEDFE":"var(--surface)"};color:${editForm.sleepType===t.id?"#534AB7":"var(--text-soft)"};font-weight:500;font-family:inherit" data-editsleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
-    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div></div>`;
+    if(editForm.sleepType==="notturno"){
+      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Data inizio</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date"></div><div><label class="flbl">Data fine</label><input type="date" value="${editForm.sleepEndDate||editForm.date||todayISO()}" data-editupd="sleepEndDate"></div></div>`;
+    } else {
+      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
+    }
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Ora inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Ora fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div></div>`;
   }
   if(editForm.category==="cacca"){
     h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
@@ -410,12 +443,12 @@ function renderEditModal(){
 // NAV
 const tabCls={registra:"nb registra",oggi:"nb oggi",agenda:"nb agenda",stats:"nb plain",logset:"nb plain"};
 const TABS=["registra","oggi","agenda","stats","logset"];
-function switchTab(t){curTab=t;TABS.forEach(k=>{document.getElementById("tab-"+k).className=tabCls[k]+(k===t?" on":"");});render();}
+function switchTab(t){curTab=t;if(t==="oggi")dayOffset=0;TABS.forEach(k=>{document.getElementById("tab-"+k).className=tabCls[k]+(k===t?" on":"");});render();}
 
 function selectCat(c){
   curCat=c;const n=nowTStr();const d=todayISO();
   if(c==="cibo")formState={date:d,time:n,foods:[{type:sortedFoods()[0],grams:""}],note:""};
-  else if(c==="sonno")formState={date:d,sleepType:"pisolino",sleepStart:n,sleepEnd:"",note:""};
+  else if(c==="sonno"){const nd=new Date();nd.setDate(nd.getDate()+1);formState={date:d,sleepEndDate:localISO(nd),sleepType:"pisolino",sleepStart:n,sleepEnd:"",note:""};}
   else if(c==="cacca")formState={date:d,time:n,poopType:POOP_T[0],note:""};
   else if(c==="visita")formState={date:d,showTime:false,time:n,visitType:VISIT_T[0],note:""};
   else if(c==="malattia")formState={date:d,showTime:false,time:n,illnessType:ILL_T[0],temp:"",note:""};
@@ -479,18 +512,21 @@ function renderAgenda(){
 }
 
 function renderToday(){
-  const today=todayISO();
-  const tE=entries.filter(e=>isEntryToday(e));
+  const selDate=dateWithOffset(dayOffset);
+  const isToday=dayOffset===0;
+  const dayLabel=fmtDayLabel(selDate);
+  const tE=entries.filter(e=>isEntryOnDate(e,selDate));
   const fE=tE.filter(e=>e.category==="cibo"),slE=tE.filter(e=>e.category==="sonno"),pE=tE.filter(e=>e.category==="cacca");
   const fG=fE.reduce((s,e)=>s+eTotG(e),0);
-  const slM=slE.reduce((s,e)=>s+sleepMinutes(e.sleepStart,e.sleepEnd),0);
+  const slM=slE.reduce((s,e)=>s+sleepMinutes(e.sleepStart,e.sleepEnd,e.date,e.sleepEndDate),0);
   const sh=Math.floor(slM/60),sm=slM%60,slStr=sh>0?(sh+"h"+(sm>0?sm+"m":"")):(sm>0?sm+"m":"–");
-  let h=`<div class="sumgrid">
+  let h=`<div class="weeknav"><button class="wkbtn" data-daynav="-1">${E.back}</button><div><div class="wklabel" style="text-transform:capitalize">${dayLabel}</div>${isToday?`<div class="wksub">oggi</div>`:`<div class="wksub"><button style="border:none;background:none;color:#D4537E;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:underline" data-daytoday>torna a oggi</button></div>`}</div><button class="wkbtn" data-daynav="1" ${dayOffset>=0?'style="opacity:.3;pointer-events:none"':""}>${E.fwd}</button></div>`;
+  h+=`<div class="sumgrid">
     <div class="scard" style="background:#FAEEDA;color:#854F0B"><div class="sico">🍎</div><div class="sv">${fE.length}</div><div class="ss">${fG}${UNITS.cibo}</div></div>
     <div class="scard" style="background:#EEEDFE;color:#534AB7"><div class="sico">🌙</div><div class="sv">${slStr}</div><div class="ss">${slE.length} period${slE.length!==1?"i":"o"}</div></div>
-    <div class="scard" style="background:#FAECE7;color:#993C1D"><div class="sico">💩</div><div class="sv">${pE.length}</div><div class="ss">oggi</div></div>
+    <div class="scard" style="background:#FAECE7;color:#993C1D"><div class="sico">💩</div><div class="sv">${pE.length}</div><div class="ss">${isToday?"oggi":"tot."}</div></div>
   </div>`;
-  const tA=appointments.filter(a=>a.date===today).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  const tA=appointments.filter(a=>a.date===selDate).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   if(tA.length){h+=`<div class="psec"><div class="phdr" style="background:#E6F1FB;color:#185FA5">📅 Impegni</div>`;tA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div></div>`);h+=`</div>`;}
   const tS=tE.filter(e=>e.category==="spesa");
   if(tS.length){h+=`<div class="psec"><div class="phdr" style="background:#E8F5E0;color:#3D7A1C">🛒 Spesa</div>`;tS.forEach(e=>h+=eCardHtml(e));h+=`</div>`;}
@@ -529,9 +565,15 @@ function renderRegister(){
       h+=`</div><button class="add-food-btn" id="addFoodBtn">＋ Aggiungi alimento</button></div>`;
     }
     if(curCat==="sonno"){
-      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
       h+=`<div class="frow"><label class="flbl">Tipo</label><div class="ptags">${SLEEP_T.map(t=>`<button class="ptag${formState.sleepType===t.id?" on":""}" data-sleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
-      h+=`<div class="frow trow"><div><label class="flbl">Inizio</label><input type="time" value="${formState.sleepStart||""}" data-upd="sleepStart"></div><div><label class="flbl">Fine (opzionale)</label><input type="time" value="${formState.sleepEnd||""}" data-upd="sleepEnd"></div></div><div style="font-size:12px;color:var(--text-faint);margin-top:4px">${E.info} Puoi aggiungere la fine più tardi. Funziona anche a cavallo della mezzanotte.</div>`;
+      if(formState.sleepType==="notturno"){
+        h+=`<div class="frow trow"><div><label class="flbl">Data inizio</label><input type="date" value="${formState.date||todayISO()}" data-upd="date"></div><div><label class="flbl">Data fine</label><input type="date" value="${formState.sleepEndDate||todayISO()}" data-upd="sleepEndDate"></div></div>`;
+      } else {
+        h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+      }
+      h+=`<div class="frow trow"><div><label class="flbl">Ora inizio</label><input type="time" value="${formState.sleepStart||""}" data-upd="sleepStart"></div><div><label class="flbl">Ora fine (opz.)</label><input type="time" value="${formState.sleepEnd||""}" data-upd="sleepEnd"></div></div>`;
+      if(formState.sleepType==="notturno")h+=`<div style="font-size:12px;color:var(--text-faint);margin-top:4px">${E.info} La data fine è il giorno del risveglio.</div>`;
+      else h+=`<div style="font-size:12px;color:var(--text-faint);margin-top:4px">${E.info} Puoi aggiungere la fine più tardi.</div>`;
     }
     if(curCat==="cacca"){
       h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
@@ -577,8 +619,8 @@ function renderStats(){
   // Sonno diviso per tipo
   const slNotte=slE.filter(e=>e.sleepType==="notturno");
   const slPiso=slE.filter(e=>e.sleepType==="pisolino");
-  const notMins=slNotte.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
-  const pisMins=slPiso.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
+  const notMins=slNotte.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd,e.date,e.sleepEndDate));
+  const pisMins=slPiso.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd,e.date,e.sleepEndDate));
   const totNotM=notMins.reduce((a,b)=>a+b,0),avgNotM=notMins.length?totNotM/notMins.length:0;
   const totPisM=pisMins.reduce((a,b)=>a+b,0),avgPisM=pisMins.length?totPisM/pisMins.length:0;
   const totNotH=(totNotM/60).toFixed(1),avgNotH=Math.floor(avgNotM/60),avgNotMn=Math.round(avgNotM%60);
@@ -645,6 +687,8 @@ function attachEvents(){
   mc.querySelectorAll("[data-updfood-i]").forEach(el=>el.addEventListener("change",()=>updFood(Number(el.dataset.updfoodI),el.dataset.updfoodK,el.value)));
   mc.querySelectorAll("[data-rmvfood]").forEach(el=>el.addEventListener("click",()=>removeFoodItem(Number(el.dataset.rmvfood))));
   mc.querySelectorAll("[data-weeknav]").forEach(el=>el.addEventListener("click",()=>changeWeek(Number(el.dataset.weeknav))));
+  mc.querySelectorAll("[data-daynav]").forEach(el=>el.addEventListener("click",()=>changeDay(Number(el.dataset.daynav))));
+  mc.querySelectorAll("[data-daytoday]").forEach(el=>el.addEventListener("click",()=>{dayOffset=0;render();}));
   mc.querySelectorAll("[data-monthnav]").forEach(el=>el.addEventListener("click",()=>changeMonth(Number(el.dataset.monthnav))));
   mc.querySelectorAll("[data-delappt]").forEach(el=>el.addEventListener("click",()=>deleteAppt(el.dataset.delappt)));
   mc.querySelectorAll("[data-rmvfoodtype]").forEach(el=>el.addEventListener("click",()=>removeFood(el.dataset.rmvfoodtype)));

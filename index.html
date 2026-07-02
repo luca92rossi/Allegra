@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Allegra">
+<meta name="theme-color" content="#D4537E">
+<title>Allegra · Diario</title>
+<style>
+:root{
+  --bg:#FAF9F6;--surface:#FFFFFF;--border:#E5E2D9;--border-soft:#EFEDE5;
+  --text:#2C2C2A;--text-soft:#6B6A64;--text-faint:#9B9A93;
+  --radius-md:10px;--radius-lg:14px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1A1A18;--surface:#242422;--border:#3A3A36;--border-soft:#2E2E2B;
+  --text:#EDEBE4;--text-soft:#ABA9A0;--text-faint:#75746C;
+}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;font-size:15px}
+.wrap{max-width:440px;width:100%;min-height:100vh;display:flex;flex-direction:column;background:var(--surface)}
+
+/* HEADER */
+.hdr{padding:calc(env(safe-area-inset-top,0px) + 16px) 18px 14px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--surface);z-index:5}
+.av{width:48px;height:48px;border-radius:50%;background:#FBEAF0;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:26px}
+.hn{font-size:21px;font-weight:700;color:var(--text)}
+.hd{font-size:13px;color:var(--text-soft);text-transform:capitalize}
+.syncbadge{margin-left:auto;font-size:12px;color:var(--text-faint)}
+.syncbadge.ok{color:#0F6E56}
+.content{flex:1;overflow-y:auto;padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 100px)}
+
+/* BOTTOM NAV - tab solo emoji, sfondi colorati */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;display:flex;z-index:10;height:72px;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nb{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:28px;border:none;user-select:none;-webkit-user-select:none}
+.nb.registra{background:#2FA84F}
+.nb.oggi{background:#2E8FD6}
+.nb.agenda{background:#E8B800}
+.nb.plain{background:var(--surface);border-top:0.5px solid var(--border)}
+.nb.plain.on{box-shadow:inset 0 -3px 0 #D4537E}
+
+/* SUMMARY CARDS */
+.sumgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:20px}
+.scard{border-radius:var(--radius-md);padding:14px 6px;text-align:center}
+.scard .sico{font-size:22px}
+.sv{font-size:20px;font-weight:700;margin-top:4px}
+.ss{font-size:11px;opacity:.8}
+
+/* PERIOD SECTIONS */
+.psec{margin-bottom:20px}
+.phdr{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--radius-md);margin-bottom:9px;font-size:14px;font-weight:700}
+.phdr .pico{font-size:16px}
+
+/* ENTRY CARDS */
+.ecard{display:flex;align-items:flex-start;gap:12px;padding:13px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-md);margin-bottom:7px}
+.eico{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+.einfo{flex:1;min-width:0}
+.ecat{font-size:12.5px;font-weight:700}
+.edesc{font-size:14px;color:var(--text-soft);line-height:1.6}
+.enote{font-size:12.5px;color:var(--text-faint);font-style:italic;margin-top:3px}
+.etime{font-size:12px;color:var(--text-faint);white-space:nowrap}
+.dbtn{border:none;background:#FCEBEB;color:#C53030;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0}
+.empty{color:var(--text-faint);font-size:14px;padding:10px 0 4px 2px;font-weight:500}
+
+/* REGISTER GRID - 2 colonne */
+.prname{font-size:17px;font-weight:700;color:var(--text);margin-bottom:14px}
+.catgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:22px}
+.cbtn{padding:18px 12px;border-radius:var(--radius-lg);border:2px solid transparent;display:flex;align-items:center;gap:14px;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit}
+.cbtn .cico{font-size:24px;flex-shrink:0}
+.cbtn.on{border-color:currentColor}
+
+/* FORMS */
+.fsec{background:var(--bg);border-radius:var(--radius-md);padding:16px;margin-bottom:16px;border:0.5px solid var(--border-soft)}
+.flbl{font-size:13px;color:var(--text-soft);margin-bottom:6px;display:block;font-weight:700}
+.frow{margin-bottom:14px}
+.frow:last-child{margin-bottom:0}
+.trow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+input,select,textarea{width:100%;padding:12px;border:0.5px solid var(--border);border-radius:var(--radius-md);font-size:16px;background:var(--surface);color:var(--text);font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid #D4537E;outline-offset:-1px}
+textarea{height:68px;resize:none}
+.sbtn{width:100%;padding:14px;border-radius:var(--radius-md);border:none;font-size:16px;font-weight:700;cursor:pointer;margin-top:10px;font-family:inherit}
+.ptags{display:flex;gap:8px;flex-wrap:wrap}
+.ptag{padding:10px 14px;border-radius:20px;border:0.5px solid var(--border);font-size:14px;cursor:pointer;background:var(--surface);color:var(--text);font-family:inherit;font-weight:500}
+.ptag.on{border-color:#993C1D;background:#FAECE7;color:#993C1D}
+.addend-btn{margin-top:7px;display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:16px;border:none;background:#FBEAF0;color:#D4537E;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* FOOD */
+.food-items{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.food-item{display:grid;grid-template-columns:1fr 74px 32px;gap:6px;align-items:center}
+.food-item select{font-size:14px;padding:10px 8px}
+.food-item input{font-size:14px;padding:10px 8px;text-align:center}
+.rmv-btn{width:30px;height:30px;border-radius:8px;border:0.5px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-faint);flex-shrink:0;font-size:16px}
+.rmv-btn:hover{background:#FCEBEB;color:#A32D2D}
+.add-food-btn{display:flex;align-items:center;gap:5px;padding:10px 12px;border-radius:var(--radius-md);border:0.5px dashed var(--border);background:none;font-size:14px;cursor:pointer;color:var(--text-soft);width:100%;font-family:inherit}
+.food-col-hdr{display:grid;grid-template-columns:1fr 74px 32px;gap:6px;margin-bottom:4px}
+.food-col-hdr span{font-size:11px;color:var(--text-faint)}
+.food-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;background:#FFF3E0;color:#854F0B;font-size:12px;margin:1px 3px 1px 0}
+
+/* RECENT MEALS */
+.recentmeals{margin-top:14px;padding-top:12px;border-top:0.5px solid var(--border-soft)}
+.recentmeals .rmtitle{font-size:12px;font-weight:700;color:var(--text-soft);margin-bottom:8px}
+.rmcard{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border-soft)}
+.rmcard:last-child{border-bottom:none}
+.rmtime{font-size:12px;color:var(--text-faint);min-width:34px;padding-top:1px}
+.rmfoods{flex:1;font-size:13px;line-height:1.6}
+
+/* LOG */
+.lentry{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-bottom:0.5px solid var(--border-soft)}
+.ldate{font-size:12px;color:var(--text-faint);min-width:48px;padding-top:12px}
+.lrest{flex:1}
+.srb{font-size:14px;color:var(--text-soft);margin-bottom:14px}
+
+/* TOAST */
+.toast{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:50%;transform:translateX(-50%);background:#0F6E56;color:#fff;padding:10px 24px;border-radius:20px;font-size:15px;font-weight:700;z-index:100;white-space:nowrap}
+.loadstate{text-align:center;color:var(--text-faint);padding:60px 0;font-size:14px}
+
+/* AGENDA */
+.weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.wkbtn{width:36px;height:36px;border-radius:50%;border:0.5px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text-soft)}
+.wklabel{font-size:14px;font-weight:700;color:var(--text);text-align:center}
+.wksub{font-size:12px;color:var(--text-faint);text-align:center;margin-top:1px}
+.daycol{margin-bottom:12px}
+.daycol.today .dayhdr{background:#FBEAF0;color:#D4537E}
+.dayhdr{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:var(--radius-md);margin-bottom:7px;background:var(--bg);font-size:13px;font-weight:700;color:var(--text-soft)}
+.appt{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-md);margin-bottom:6px}
+.appttime{font-size:13px;font-weight:700;color:#185FA5;background:#E6F1FB;padding:4px 8px;border-radius:6px;min-width:48px;text-align:center;flex-shrink:0}
+.apptname{flex:1;font-size:14px;color:var(--text)}
+.addapptbtn{display:flex;align-items:center;justify-content:center;gap:6px;padding:20px;border-radius:var(--radius-lg);border:1.5px dashed var(--border);background:none;font-size:14px;cursor:pointer;color:var(--text-soft);width:100%;margin-top:6px;margin-bottom:10px;font-family:inherit}
+.apptext{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-md);margin-bottom:6px;font-size:14px;font-weight:600}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:20px;width:88%;max-width:360px}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text)}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions button{flex:1;padding:12px;border-radius:var(--radius-md);border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-cancel{background:var(--bg);color:var(--text-soft)}
+.btn-save{background:#E6F1FB;color:#185FA5}
+
+/* STATS */
+.monthnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.statcard{border-radius:var(--radius-md);padding:14px;display:flex;flex-direction:column;justify-content:space-between;min-height:88px}
+.statcard .slabel{font-size:11.5px;opacity:.85;display:flex;align-items:center;gap:6px;line-height:1.3}
+.statcard .sval{font-size:22px;font-weight:700;line-height:1.1;margin-top:8px}
+.statcard .ssub{font-size:10.5px;opacity:.7;margin-top:2px}
+.sectiontitle{font-size:12px;font-weight:700;color:var(--text-soft);margin-bottom:10px;padding-left:2px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.3px}
+.exline{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:0.5px solid var(--border-soft)}
+.exline:last-child{border-bottom:none}
+.exicowrap{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.exlabel{font-size:14px;color:var(--text);font-weight:600}
+.exsub{font-size:11.5px;color:var(--text-faint);margin-top:1px}
+.exvalue{font-size:17px;font-weight:700;color:var(--text);flex-shrink:0;margin-left:auto}
+.exvalue span{font-size:11.5px;font-weight:400;color:var(--text-faint)}
+.foodrank{display:flex;align-items:center;gap:10px;padding:8px 2px}
+.frnum{width:22px;font-size:13px;font-weight:700;color:var(--text-faint);flex-shrink:0;text-align:center}
+.frbar-wrap{flex:1;min-width:0}
+.frname{font-size:14px;color:var(--text);margin-bottom:3px;display:flex;justify-content:space-between}
+.frname b{font-weight:700;color:#854F0B}
+.frbar-bg{height:7px;border-radius:3px;background:var(--bg);overflow:hidden}
+.frbar-fill{height:100%;border-radius:3px;background:#854F0B}
+
+/* SETTINGS */
+.setsec{margin-bottom:22px}
+.sethdr{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.setsub{font-size:12.5px;color:var(--text-faint);margin-bottom:12px}
+.foodtag{display:inline-flex;align-items:center;gap:6px;padding:8px 8px 8px 12px;border-radius:18px;background:var(--bg);font-size:13px;color:var(--text);margin:0 6px 6px 0}
+.foodtag button{border:none;background:rgba(0,0,0,.06);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-faint);font-size:14px}
+.foodtag button:hover{background:#FCEBEB;color:#A32D2D}
+.foodtaglist{display:flex;flex-wrap:wrap;margin-bottom:10px}
+.addfoodrow{display:flex;gap:7px}
+.addfoodrow input{flex:1}
+.addfoodrow button{padding:0 18px;border-radius:var(--radius-md);border:none;background:#0F6E56;color:#fff;font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="hdr">
+    <div class="av">👶</div>
+    <div>
+      <div class="hn">Allegra</div>
+      <div class="hd" id="todayDate"></div>
+    </div>
+    <div class="syncbadge" id="syncBadge">☁️ connessione...</div>
+  </div>
+  <div class="content" id="mainContent"><div class="loadstate">Caricamento...</div></div>
+  <nav class="bnav">
+    <div class="nb registra" id="tab-registra">➕</div>
+    <div class="nb oggi" id="tab-oggi">🕐</div>
+    <div class="nb agenda" id="tab-agenda">📅</div>
+    <div class="nb plain" id="tab-stats">📊</div>
+    <div class="nb plain" id="tab-logset">📋</div>
+  </nav>
+</div>
+<div id="toast" class="toast" style="display:none">✅ Salvato</div>
+<div id="modalRoot"></div>
+<div id="sleepEndModalRoot"></div>
+<div id="editModalRoot"></div>
+<script type="module">
+const firebaseConfig = {
+  apiKey: "AIzaSyADkIKHE5yXKhQTcpyOdNuLSd9dcRvg4h0",
+  authDomain: "allegra-18a3e.firebaseapp.com",
+  projectId: "allegra-18a3e",
+  storageBucket: "allegra-18a3e.firebasestorage.app",
+  messagingSenderId: "316453631465",
+  appId: "1:316453631465:web:7e9472c3202e1a4f690778"
+};
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, setDoc, getDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const entriesCol = collection(db,"entries");
+const apptsCol = collection(db,"appointments");
+const settingsDocRef = doc(db,"settings","config");
+
+const E={del:"✕",plus:"＋",back:"‹",fwd:"›",save:"💾",info:"ℹ️",edit:"✏️"};
+let FOOD_T=["Latte materno","Latte formulato","Pappa","Crema di verdure","Frutta frullata","Frutta a pezzi","Verdura","Carne","Pesce","Pastina","Riso","Yogurt","Formaggio","Uovo","Biscotti","Pane/Grissini","Succo","Acqua","Merenda","Altro"];
+const POOP_T=["Normale","Morbida","Diarrea","Stitichezza","Con muco"];
+const VISIT_T=["Pediatra","Vaccino","Controllo peso","Specialista","PS","Altro"];
+const ILL_T=["Febbre","Raffreddore","Tosse","Influenza","Vomito","Eruzione","Altro"];
+const TIME_T=[
+  {id:"ore",label:"Ore",ico:"⏱️",bg:"#FDF0E3",col:"#B5530F",mode:"hours"},
+  {id:"giorno",label:"Giorno",ico:"☀️",bg:"#FFF3E0",col:"#854F0B",mode:"day"},
+  {id:"notte",label:"Notte",ico:"🌜",bg:"#EEEDFE",col:"#534AB7",mode:"day"}
+];
+const SLEEP_T=[{id:"notturno",label:"Sonno notturno"},{id:"pisolino",label:"Pisolino"}];
+const DAY_NAMES=["Lunedì","Martedì","Mercoledì","Giovedì","Venerdì","Sabato","Domenica"];
+const MONTH_NAMES=["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
+const CATS={
+  cibo:{label:"Cibo",ico:"🍎",bg:"#FAEEDA",col:"#854F0B"},
+  sonno:{label:"Sonno",ico:"🌙",bg:"#EEEDFE",col:"#534AB7"},
+  cacca:{label:"Cacca",ico:"💩",bg:"#FAECE7",col:"#993C1D"},
+  visita:{label:"Visita",ico:"🩺",bg:"#E1F5EE",col:"#0F6E56"},
+  spesa:{label:"Spesa",ico:"🛒",bg:"#E8F5E0",col:"#3D7A1C"},
+  malattia:{label:"Malattia",ico:"🤒",bg:"#FCEBEB",col:"#A32D2D"},
+  tempo:{label:"Tempo",ico:"⏰",bg:"#FDF0E3",col:"#B5530F"},
+  nota:{label:"Nota/Attività",ico:"📝",bg:"#F1EFE8",col:"#5F5E5A"}
+};
+const PERIODS=[
+  {id:"notte",label:"Notte",start:0,end:6,bg:"#EEEDFE",col:"#534AB7"},
+  {id:"mattino",label:"Mattino",start:6,end:12,bg:"#FFF8E0",col:"#854F0B"},
+  {id:"pomeriggio",label:"Pomeriggio",start:12,end:18,bg:"#FAECE7",col:"#993C1D"},
+  {id:"sera",label:"Sera",start:18,end:24,bg:"#E1F5EE",col:"#0F6E56"}
+];
+let UNITS={cibo:"g",sonno:"h",tempo:"h"};
+let entries=[],appointments=[];
+let curTab="registra",curCat=null,formState={},weekOffset=0,monthOffset=0,apptForm=null,newFoodName="",firstSnap=false,editingEntry=null,editForm=null;
+
+// ===== DATE HELPERS =====
+function localISO(d){
+  if(!d) d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function todayISO(){return localISO(new Date());}
+function isoOfTs(ts){return localISO(new Date(ts));}
+function fmtISO(d){return localISO(d);}
+function fmtT(time){return time||"";}
+function fmtD(iso){if(!iso)return"";const p=iso.split("-");return parseInt(p[2])+" "+MONTH_NAMES[parseInt(p[1])-1].slice(0,3).toLowerCase();}
+function getPeriod(time){if(!time)return"mattino";const h=parseInt(time.split(":")[0]);if(h<6)return"notte";if(h<12)return"mattino";if(h<18)return"pomeriggio";return"sera";}
+function nowTStr(){const d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function esc(s){const d=document.createElement("div");d.textContent=s||"";return d.innerHTML;}
+function inMonth(dateStr,off){
+  if(!dateStr)return false;
+  const ref=new Date();ref.setMonth(ref.getMonth()+off);
+  const p=dateStr.split("-");
+  return parseInt(p[0])===ref.getFullYear()&&parseInt(p[1])-1===ref.getMonth();
+}
+function isEntryToday(e){
+  if(e.date===todayISO())return true;
+  if(!e.date&&e.timestamp&&isoOfTs(e.timestamp)===todayISO())return true;
+  return false;
+}
+
+// ===== MIGRAZIONE: calcola date da timestamp vecchi E salva =====
+function ensureDate(e){
+  if(!e.date&&e.timestamp){
+    e.date=isoOfTs(e.timestamp);
+    // Salva il date calcolato su Firestore in background (non aspettare)
+    updateEntry(e.id,{date:e.date}).catch(err=>console.log("Migrazione date fallita:",err));
+  }
+  return e;
+}
+
+function sleepMinutes(start,end){
+  if(!start||!end)return 0;
+  const[sh,sm]=start.split(":").map(Number);
+  const[eh,em]=end.split(":").map(Number);
+  let m=(eh*60+em)-(sh*60+sm);
+  if(m<0)m+=1440;
+  return m;
+}
+
+function eDesc(e){
+  const foods=sortedFoods();
+  if(e.category==="cibo"&&e.foods&&e.foods.length)return e.foods.map(f=>`<span class="food-pill">${esc(f.type)}${f.grams?" · "+f.grams+UNITS.cibo:""}</span>`).join("");
+  if(e.category==="sonno"){const st=SLEEP_T.find(t=>t.id===e.sleepType);const lbl=st?st.label+": ":"";return lbl+(e.sleepStart||"?")+" → "+(e.sleepEnd||"in corso");}
+  if(e.category==="cacca")return e.poopType||"Normale";
+  if(e.category==="visita"){let s=e.visitType||"";if(e.showTime&&e.time)s+=" · "+e.time;return s;}
+  if(e.category==="malattia"){let s=e.illnessType||"";if(e.temp)s+=" · "+e.temp+"°";if(e.showTime&&e.time)s+=" · "+e.time;return s;}
+  if(e.category==="tempo"){const t=TIME_T.find(x=>x.id===e.timeType);return t?(t.mode==="day"?t.label+" intero":t.label+" · "+(e.hours||0)+UNITS.tempo):"";}
+  if(e.category==="spesa")return e.note?esc(e.note):"Spesa";
+  if(e.category==="nota"){return e.description?esc(e.description):esc(e.note||"Nota");}
+  return esc(e.note||"");
+}
+function eTotG(e){return(e.category==="cibo"&&e.foods)?e.foods.reduce((s,f)=>s+(Number(f.grams)||0),0):0;}
+
+function eCardHtml(e,showEdit=true){
+  const c=CATS[e.category];
+  const showEnd=e.category==="sonno"&&!e.sleepEnd;
+  const timeStr=e.time||"";
+  return`<div class="ecard">
+    <div class="eico" style="background:${c.bg}">${c.ico}</div>
+    <div class="einfo">
+      <div class="ecat" style="color:${c.col}">${c.label}</div>
+      <div class="edesc">${eDesc(e)}</div>
+      ${e.note&&!["spesa","nota"].includes(e.category)?`<div class="enote">${esc(e.note)}</div>`:""}
+      ${e.category==="nota"&&e.note&&e.description?`<div class="enote">${esc(e.note)}</div>`:""}
+      ${showEnd?`<button class="addend-btn" data-addend="${e.id}">🕐 Aggiungi ora fine</button>`:""}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+      <div class="etime">${timeStr?timeStr:(e.date?fmtD(e.date):"")}</div>
+      ${showEdit?`<div style="display:flex;gap:4px"><button class="dbtn" data-edit="${e.id}">${E.edit}</button><button class="dbtn" data-del="${e.id}">${E.del}</button></div>`:"<button class=\"dbtn\" data-del=\""+e.id+"\">"+E.del+"</button>"}
+    </div>
+  </div>`;
+}
+
+function showToast(m){const t=document.getElementById("toast");t.textContent="✅ "+(m||"Salvato");t.style.display="block";setTimeout(()=>t.style.display="none",2000);}
+function setSyncBadge(s){const b=document.getElementById("syncBadge");if(s==="ok"){b.textContent="☁️ sincronizzato";b.className="syncbadge ok";}else if(s==="err"){b.textContent="❌ errore";b.className="syncbadge";}else{b.textContent="☁️ connessione...";b.className="syncbadge";}}
+
+// FIRESTORE
+onSnapshot(query(entriesCol,orderBy("timestamp","desc")),(snap)=>{entries=snap.docs.map(d=>{let e={id:d.id,...d.data()};return ensureDate(e);});firstSnap=true;setSyncBadge("ok");render();},(err)=>{console.error(err);setSyncBadge("err");if(!firstSnap)document.getElementById("mainContent").innerHTML=`<div class="loadstate">Impossibile connettersi. Verifica Firestore.</div>`;});
+onSnapshot(apptsCol,(snap)=>{appointments=snap.docs.map(d=>({id:d.id,...d.data()}));render();},(err)=>console.error(err));
+getDoc(settingsDocRef).then(s=>{if(s.exists()){const d=s.data();if(d.foods&&Array.isArray(d.foods)&&d.foods.length)FOOD_T=d.foods;if(d.units)UNITS={...UNITS,...d.units};render();}}).catch(e=>console.error(e));
+async function saveSettings(){try{await setDoc(settingsDocRef,{foods:FOOD_T,units:UNITS});}catch(e){console.error(e);}}
+async function saveEntry(en){try{await addDoc(entriesCol,{...en,createdAt:serverTimestamp()});showToast();}catch(e){console.error(e);showToast("Errore");}}
+async function updateEntry(id,updates){try{await setDoc(doc(db,"entries",id),updates,{merge:true});showToast("Modificato");}catch(e){console.error(e);showToast("Errore");}}
+async function deleteEntry(id){try{await deleteDoc(doc(db,"entries",id));}catch(e){console.error(e);}}
+async function saveApptFn(a){try{await addDoc(apptsCol,a);showToast();}catch(e){console.error(e);}}
+async function deleteAppt(id){try{await deleteDoc(doc(db,"appointments",id));}catch(e){console.error(e);}}
+
+// SLEEP END MODAL
+let sleepEndForm=null;
+function openSleepEnd(id){sleepEndForm={id,time:nowTStr()};renderSleepModal();}
+function closeSleepEnd(){sleepEndForm=null;renderSleepModal();}
+async function confirmSleepEnd(){try{await updateEntry(sleepEndForm.id,{sleepEnd:sleepEndForm.time});showToast("Aggiornato");}catch(e){console.error(e);}sleepEndForm=null;renderSleepModal();}
+function renderSleepModal(){const r=document.getElementById("sleepEndModalRoot");if(!sleepEndForm){r.innerHTML="";return;}r.innerHTML=`<div class="modal-overlay"><div class="modal"><h3>🌙 Ora fine sonno</h3><div class="frow"><input type="time" id="sleepEndT" value="${sleepEndForm.time}"></div><div class="modal-actions"><button class="btn-cancel" id="sleepEndC">Annulla</button><button class="btn-save" id="sleepEndS">✅ Salva</button></div></div></div>`;document.getElementById("sleepEndT").addEventListener("change",e=>sleepEndForm.time=e.target.value);document.getElementById("sleepEndC").addEventListener("click",closeSleepEnd);document.getElementById("sleepEndS").addEventListener("click",confirmSleepEnd);}
+
+// EDIT MODAL
+function openEdit(id){
+  editingEntry=entries.find(e=>e.id===id);
+  if(!editingEntry)return;
+  editForm={...editingEntry};
+  renderEditModal();
+}
+function closeEdit(){editingEntry=null;editForm=null;renderEditModal();}
+function confirmEdit(){
+  if(!editingEntry||!editForm)return;
+  const updates={...editForm};
+  delete updates.id;
+  delete updates.timestamp;
+  delete updates.createdAt;
+  updateEntry(editingEntry.id,updates);
+  closeEdit();render();
+}
+function renderEditModal(){
+  const r=document.getElementById("editModalRoot");
+  if(!editForm){r.innerHTML="";return;}
+  const c=CATS[editForm.category];
+  let h=`<div class="modal-overlay"><div class="modal"><h3>✏️ Modifica ${c.label}</h3>`;
+  
+  if(editForm.category==="cibo"){
+    h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
+    h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${editForm.time||""}" data-editupd="time" style="max-width:140px"></div>`;
+    h+=`<div class="frow"><div style="font-size:11px;color:var(--text-faint);margin-bottom:6px">Alimenti</div><div class="food-items">`;
+    (editForm.foods||[]).forEach((f,i)=>{h+=`<div style="display:grid;grid-template-columns:1fr 74px 32px;gap:6px;align-items:center"><select data-editfood="${i}" data-editfoodkey="type">${sortedFoods().map(t=>`<option value="${t}"${t===f.type?" selected":""}>${t}</option>`).join("")}</select><input type="number" value="${f.grams||""}" placeholder="–" data-editfood="${i}" data-editfoodkey="grams" style="font-size:14px;padding:10px 8px;border:0.5px solid var(--color-border-secondary)"><button style="border:none;background:#FCEBEB;color:#A32D2D;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px" data-rmveditfood="${i}">${E.del}</button></div>`;});
+    h+=`</div><button style="display:flex;align-items:center;gap:5px;padding:10px 12px;border:0.5px dashed var(--color-border-secondary);background:none;font-size:14px;cursor:pointer;color:var(--text-soft);width:100%;border-radius:10px;margin-top:6px;font-family:inherit" id="addEditFood">＋ Alimento</button></div>`;
+    h+=`<div class="frow"><label class="flbl">Note</label><textarea data-editupd="note" style="height:60px;padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit">${esc(editForm.note||"")}</textarea></div>`;
+  }
+  if(editForm.category==="sonno"){
+    h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
+    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${SLEEP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:14px;cursor:pointer;background:${editForm.sleepType===t.id?"#EEEDFE":"var(--color-background-primary)"};color:${editForm.sleepType===t.id?"#534AB7":"var(--color-text-secondary)"};font-weight:500;font-family:inherit" data-editsleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--color-border-secondary);border-radius:10px;font-family:inherit"></div></div>`;
+  }
+  if(editForm.category==="cacca"){
+    h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
+    h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${editForm.time||""}" data-editupd="time" style="max-width:140px"></div>`;
+    h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${POOP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--color-border-secondary);font-size:14px;cursor:pointer;background:${editForm.poopType===t?"#FAECE7":"var(--color-background-primary)"};color:${editForm.poopType===t?"#993C1D":"var(--color-text-secondary)"};font-weight:500;font-family:inherit" data-editpoop="${t}">${t}</button>`).join("")}</div></div>`;
+  }
+  
+  h+=`<div class="modal-actions"><button class="btn-cancel" id="editCancel">Annulla</button><button class="btn-save" id="editSave">✅ Salva</button></div></div></div>`;
+  r.innerHTML=h;
+  
+  document.querySelectorAll("[data-editupd]").forEach(el=>el.addEventListener("change",e=>{editForm[el.dataset.editupd]=e.target.value;}));
+  document.querySelectorAll("[data-editfood]").forEach(el=>el.addEventListener("change",e=>{const i=Number(el.dataset.editfood);const k=el.dataset.editfoodkey;editForm.foods[i][k]=e.target.value;}));
+  document.querySelectorAll("[data-rmveditfood]").forEach(el=>el.addEventListener("click",()=>{const i=Number(el.dataset.rmveditfood);if(editForm.foods.length>1)editForm.foods.splice(i,1);renderEditModal();}));
+  document.querySelectorAll("[data-editsleeptype]").forEach(el=>el.addEventListener("click",()=>{editForm.sleepType=el.dataset.editsleeptype;renderEditModal();}));
+  document.querySelectorAll("[data-editpoop]").forEach(el=>el.addEventListener("click",()=>{editForm.poopType=el.dataset.editpoop;renderEditModal();}));
+  document.getElementById("addEditFood")?.addEventListener("click",()=>{editForm.foods.push({type:sortedFoods()[0],grams:""});renderEditModal();});
+  document.getElementById("editCancel").addEventListener("click",closeEdit);
+  document.getElementById("editSave").addEventListener("click",confirmEdit);
+}
+
+// NAV
+const tabCls={registra:"nb registra",oggi:"nb oggi",agenda:"nb agenda",stats:"nb plain",logset:"nb plain"};
+const TABS=["registra","oggi","agenda","stats","logset"];
+function switchTab(t){curTab=t;TABS.forEach(k=>{document.getElementById("tab-"+k).className=tabCls[k]+(k===t?" on":"");});render();}
+
+function selectCat(c){
+  curCat=c;const n=nowTStr();const d=todayISO();
+  if(c==="cibo")formState={date:d,time:n,foods:[{type:sortedFoods()[0],grams:""}],note:""};
+  else if(c==="sonno")formState={date:d,sleepType:"notturno",sleepStart:n,sleepEnd:"",note:""};
+  else if(c==="cacca")formState={date:d,time:n,poopType:POOP_T[0],note:""};
+  else if(c==="visita")formState={date:d,showTime:false,time:n,visitType:VISIT_T[0],note:""};
+  else if(c==="malattia")formState={date:d,showTime:false,time:n,illnessType:ILL_T[0],temp:"",note:""};
+  else if(c==="tempo")formState={date:d,timeType:TIME_T[0].id,hours:"",note:""};
+  else if(c==="spesa")formState={date:d,note:""};
+  else if(c==="nota")formState={date:d,showTime:false,time:n,description:"",note:""};
+  else formState={date:d,time:n,note:""};
+  render();
+}
+function addFoodItem(){formState.foods.push({type:sortedFoods()[0],grams:""});render();}
+function removeFoodItem(i){if(formState.foods.length>1){formState.foods.splice(i,1);render();}}
+function updFood(i,k,v){formState.foods[i][k]=v;}
+function upd(k,v){formState[k]=v;}
+function toggleTime(){formState.showTime=!formState.showTime;render();}
+function selectTimeType(id){formState.timeType=id;render();}
+function selectSleepType(id){formState.sleepType=id;render();}
+function submitEntry(){
+  const entry={timestamp:Date.now(),category:curCat,...formState};
+  saveEntry(entry);
+  curCat=null;formState={};switchTab("oggi");
+}
+
+// AGENDA
+function getWeekStart(o){
+  const d=new Date();
+  const dow=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-dow+o*7);
+  d.setHours(12,0,0,0);
+  return d;
+}
+function changeWeek(d){weekOffset+=d;render();}
+function openApptModal(){apptForm={title:"",date:fmtISO(getWeekStart(weekOffset)),time:"09:00"};renderApptModal();}
+function closeApptModal(){apptForm=null;renderApptModal();}
+function confirmSaveAppt(){if(!apptForm.title.trim())return;saveApptFn({...apptForm});apptForm=null;renderApptModal();render();}
+function renderApptModal(){const r=document.getElementById("modalRoot");if(!apptForm){r.innerHTML="";return;}r.innerHTML=`<div class="modal-overlay"><div class="modal"><h3>📅 Nuovo impegno</h3><div class="frow"><label class="flbl">Nome</label><input type="text" id="apptT" value="${esc(apptForm.title)}" placeholder="es. Vaccino, Pediatra..."></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Data</label><input type="date" id="apptD" value="${apptForm.date}"></div><div><label class="flbl">Ora</label><input type="time" id="apptH" value="${apptForm.time}"></div></div><div class="modal-actions"><button class="btn-cancel" id="apptCan">Annulla</button><button class="btn-save" id="apptSav">✅ Salva</button></div></div></div>`;document.getElementById("apptT").addEventListener("input",e=>{apptForm.title=e.target.value;});document.getElementById("apptD").addEventListener("change",e=>{apptForm.date=e.target.value;});document.getElementById("apptH").addEventListener("change",e=>{apptForm.time=e.target.value;});document.getElementById("apptCan").addEventListener("click",closeApptModal);document.getElementById("apptSav").addEventListener("click",confirmSaveAppt);document.getElementById("apptT").focus();}
+
+function renderAgenda(){
+  const start=getWeekStart(weekOffset);const end=new Date(start);end.setDate(end.getDate()+6);
+  const tISO=todayISO();
+  const label=weekOffset===0?"Questa settimana":(weekOffset===1?"Prossima":(weekOffset===-1?"Scorsa":(weekOffset>0?"Tra "+weekOffset+" sett.":Math.abs(weekOffset)+" sett. fa")));
+  const sub=`${start.toLocaleDateString("it-IT",{day:"numeric",month:"short"})} – ${end.toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}`;
+  let h=`<div class="weeknav"><button class="wkbtn" data-weeknav="-1">${E.back}</button><div><div class="wklabel">${label}</div><div class="wksub">${sub}</div></div><button class="wkbtn" data-weeknav="1">${E.fwd}</button></div>`;
+  for(let i=0;i<7;i++){
+    const d=new Date(start);d.setDate(d.getDate()+i);
+    const iso=fmtISO(d);const isT=iso===tISO;
+    const dA=appointments.filter(a=>a.date===iso).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+    const dT=entries.filter(e=>e.category==="tempo"&&e.date===iso);
+    const dS=entries.filter(e=>e.category==="spesa"&&e.date===iso);
+    const dV=entries.filter(e=>e.category==="visita"&&e.date===iso);
+    const dM=entries.filter(e=>e.category==="malattia"&&e.date===iso);
+    const dN=entries.filter(e=>e.category==="nota"&&e.date===iso);
+    const dSl=entries.filter(e=>e.category==="sonno"&&e.date===iso);
+    const dC=entries.filter(e=>e.category==="cibo"&&e.date===iso);
+    const dCa=entries.filter(e=>e.category==="cacca"&&e.date===iso);
+    const hasAny=dA.length||dT.length||dS.length||dV.length||dM.length||dN.length||dSl.length||dC.length||dCa.length;
+    h+=`<div class="daycol${isT?" today":""}"><div class="dayhdr"><span>${DAY_NAMES[i]}</span><span style="font-weight:400;opacity:.75">${d.toLocaleDateString("it-IT",{day:"numeric",month:"short"})}${isT?" · oggi":""}</span></div>`;
+    if(!hasAny)h+=`<div class="empty">---</div>`;
+    else{
+      dA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div><button class="dbtn" data-delappt="${a.id}">${E.del}</button></div>`);
+      dV.forEach(e=>h+=`<div class="apptext" style="background:#E1F5EE;color:#0F6E56">🩺 ${esc(e.visitType||"Visita")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
+      dM.forEach(e=>h+=`<div class="apptext" style="background:#FCEBEB;color:#A32D2D">🤒 ${esc(e.illnessType||"")}${e.temp?" · "+e.temp+"°":""}</div>`);
+      dN.forEach(e=>h+=`<div class="apptext" style="background:#F1EFE8;color:#5F5E5A">📝 ${esc(e.description||e.note||"Nota")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
+      dT.forEach(e=>{const t=TIME_T.find(x=>x.id===e.timeType);if(!t)return;const l=t.mode==="day"?t.label+" intero":t.label+" · "+(e.hours||0)+UNITS.tempo;h+=`<div class="apptext" style="background:${t.bg};color:${t.col}">${t.ico} ${l}</div>`;});
+      dS.forEach(e=>h+=`<div class="apptext" style="background:#E8F5E0;color:#3D7A1C">🛒 ${e.note?esc(e.note):"Spesa"}</div>`);
+      dSl.forEach(e=>{const st=SLEEP_T.find(t=>t.id===e.sleepType);h+=`<div class="apptext" style="background:#EEEDFE;color:#534AB7">🌙 ${st?st.label:""} ${e.sleepStart||""} → ${e.sleepEnd||"in corso"}</div>`;});
+      dC.forEach(e=>{const desc=e.foods?e.foods.map(f=>f.type).join(", "):"";h+=`<div class="apptext" style="background:#FAEEDA;color:#854F0B">🍎 ${e.time||""} ${desc}</div>`;});
+      dCa.forEach(e=>h+=`<div class="apptext" style="background:#FAECE7;color:#993C1D">💩 ${e.time||""} ${e.poopType||""}</div>`);
+    }
+    h+=`</div>`;
+  }
+  h+=`<button class="addapptbtn" id="addApptBtn">＋ Aggiungi impegno</button>`;
+  return h;
+}
+
+function renderToday(){
+  const today=todayISO();
+  const tE=entries.filter(e=>isEntryToday(e));
+  const fE=tE.filter(e=>e.category==="cibo"),slE=tE.filter(e=>e.category==="sonno"),pE=tE.filter(e=>e.category==="cacca");
+  const fG=fE.reduce((s,e)=>s+eTotG(e),0);
+  const slM=slE.reduce((s,e)=>s+sleepMinutes(e.sleepStart,e.sleepEnd),0);
+  const sh=Math.floor(slM/60),sm=slM%60,slStr=sh>0?(sh+"h"+(sm>0?sm+"m":"")):(sm>0?sm+"m":"–");
+  let h=`<div class="sumgrid">
+    <div class="scard" style="background:#FAEEDA;color:#854F0B"><div class="sico">🍎</div><div class="sv">${fE.length}</div><div class="ss">${fG}${UNITS.cibo}</div></div>
+    <div class="scard" style="background:#EEEDFE;color:#534AB7"><div class="sico">🌙</div><div class="sv">${slStr}</div><div class="ss">${slE.length} period${slE.length!==1?"i":"o"}</div></div>
+    <div class="scard" style="background:#FAECE7;color:#993C1D"><div class="sico">💩</div><div class="sv">${pE.length}</div><div class="ss">oggi</div></div>
+  </div>`;
+  const tA=appointments.filter(a=>a.date===today).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+  if(tA.length){h+=`<div class="psec"><div class="phdr" style="background:#E6F1FB;color:#185FA5">📅 Impegni</div>`;tA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div></div>`);h+=`</div>`;}
+  const tS=tE.filter(e=>e.category==="spesa");
+  if(tS.length){h+=`<div class="psec"><div class="phdr" style="background:#E8F5E0;color:#3D7A1C">🛒 Spesa</div>`;tS.forEach(e=>h+=eCardHtml(e));h+=`</div>`;}
+  PERIODS.forEach(p=>{
+    const pe=tE.filter(e=>{
+      if(e.category==="spesa")return false;
+      const t=e.time||e.sleepStart||"12:00";
+      return getPeriod(t)===p.id;
+    }).sort((a,b)=>(a.time||a.sleepStart||"").localeCompare(b.time||b.sleepStart||""));
+    h+=`<div class="psec"><div class="phdr" style="background:${p.bg};color:${p.col}">${p.label} <span style="opacity:.6;font-weight:400;font-size:12px;margin-left:4px">${p.start}:00–${p.end===24?0:p.end}:00</span></div>`;
+    if(!pe.length)h+=`<div class="empty">---</div>`;else pe.forEach(e=>h+=eCardHtml(e));h+="</div>";
+  });
+  return h;
+}
+
+function dateTimeFields(){
+  let h=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+  h+=`<div class="frow" style="display:flex;align-items:center;gap:10px"><label style="font-size:14px;font-weight:600;color:var(--text-soft);display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" ${formState.showTime?"checked":""} data-toggle-time style="width:22px;height:22px"> Aggiungi orario</label></div>`;
+  if(formState.showTime)h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${formState.time||""}" data-upd="time" style="max-width:140px"></div>`;
+  return h;
+}
+
+function renderRegister(){
+  const sf=sortedFoods();
+  let h=`<div class="prname">Cosa registri?</div><div class="catgrid">`;
+  Object.entries(CATS).forEach(([id,c])=>{h+=`<button class="cbtn${curCat===id?" on":""}" style="background:${c.bg};color:${c.col}" data-selcat="${id}"><span class="cico">${c.ico}</span>${c.label}</button>`;});
+  h+="</div>";
+  if(curCat){
+    const c=CATS[curCat];
+    h+=`<div class="fsec">`;
+    if(curCat==="cibo"){
+      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+      h+=`<div class="frow"><label class="flbl">Orario pasto</label><input type="time" value="${formState.time||""}" data-upd="time" style="max-width:140px"></div>
+      <div class="frow"><div class="food-col-hdr"><span>Alimento</span><span style="text-align:center">${UNITS.cibo}</span><span></span></div><div class="food-items">`;
+      (formState.foods||[]).forEach((f,i)=>{h+=`<div class="food-item"><select data-updfood-i="${i}" data-updfood-k="type">${sf.map(t=>`<option value="${t}"${t===f.type?" selected":""}>${t}</option>`).join("")}</select><input type="number" min="0" value="${f.grams||""}" placeholder="–" data-updfood-i="${i}" data-updfood-k="grams"><button class="rmv-btn" data-rmvfood="${i}">${E.del}</button></div>`;});
+      h+=`</div><button class="add-food-btn" id="addFoodBtn">＋ Aggiungi alimento</button></div>`;
+    }
+    if(curCat==="sonno"){
+      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+      h+=`<div class="frow"><label class="flbl">Tipo</label><div class="ptags">${SLEEP_T.map(t=>`<button class="ptag${formState.sleepType===t.id?" on":""}" data-sleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
+      h+=`<div class="frow trow"><div><label class="flbl">Inizio</label><input type="time" value="${formState.sleepStart||""}" data-upd="sleepStart"></div><div><label class="flbl">Fine (opzionale)</label><input type="time" value="${formState.sleepEnd||""}" data-upd="sleepEnd"></div></div><div style="font-size:12px;color:var(--text-faint);margin-top:4px">${E.info} Puoi aggiungere la fine più tardi. Funziona anche a cavallo della mezzanotte.</div>`;
+    }
+    if(curCat==="cacca"){
+      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+      h+=`<div class="frow"><label class="flbl">Orario</label><input type="time" value="${formState.time||""}" data-upd="time" style="max-width:140px"></div><div class="frow"><label class="flbl">Tipo</label><div class="ptags">${POOP_T.map(t=>`<button class="ptag${formState.poopType===t?" on":""}" data-poop="${t}">${t}</button>`).join("")}</div></div>`;
+    }
+    if(curCat==="visita"){h+=dateTimeFields();h+=`<div class="frow"><label class="flbl">Tipo visita</label><select data-upd="visitType">${VISIT_T.map(t=>`<option${t===formState.visitType?" selected":""}>${t}</option>`).join("")}</select></div>`;}
+    if(curCat==="malattia"){h+=dateTimeFields();h+=`<div class="frow"><label class="flbl">Sintomo</label><select data-upd="illnessType">${ILL_T.map(t=>`<option${t===formState.illnessType?" selected":""}>${t}</option>`).join("")}</select></div><div class="frow"><label class="flbl">Temperatura</label><input type="number" step="0.1" value="${formState.temp||""}" data-upd="temp" placeholder="37.2" style="max-width:110px"></div>`;}
+    if(curCat==="tempo"){
+      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div>`;
+      const curT=TIME_T.find(t=>t.id===formState.timeType)||TIME_T[0];
+      h+=`<div class="frow"><label class="flbl">Tipo</label><div class="ptags">${TIME_T.map(t=>`<button class="ptag${formState.timeType===t.id?" on":""}" data-timetype="${t.id}">${t.ico} ${t.label}</button>`).join("")}</div></div>`;
+      if(curT.mode==="hours")h+=`<div class="frow"><label class="flbl">Numero ore</label><input type="number" min="0" step="0.5" value="${formState.hours||""}" data-upd="hours" placeholder="es. 2" style="max-width:110px"></div>`;
+    }
+    if(curCat==="spesa")h+=`<div class="frow"><label class="flbl">Giorno spesa</label><input type="date" value="${formState.date||todayISO()}" data-upd="date" style="max-width:170px"></div><div class="frow"><label class="flbl">Cosa comprare</label><textarea data-upd="note" placeholder="es. pannolini, latte...">${esc(formState.note||"")}</textarea></div>`;
+    if(curCat==="nota"){h+=dateTimeFields();h+=`<div class="frow"><label class="flbl">Descrizione (visibile in agenda)</label><textarea data-upd="description" placeholder="es. Piscina, Incontro pedagogista...">${esc(formState.description||"")}</textarea></div>`;}
+    if(!["spesa","nota"].includes(curCat))h+=`<div class="frow"><label class="flbl">Note (opzionale)</label><textarea data-upd="note" placeholder="Aggiungi una nota...">${esc(formState.note||"")}</textarea></div>`;
+    if(curCat==="nota")h+=`<div class="frow"><label class="flbl">Note aggiuntive</label><textarea data-upd="note" placeholder="Dettagli...">${esc(formState.note||"")}</textarea></div>`;
+    h+=`<button class="sbtn" style="background:${c.bg};color:${c.col}" id="submitBtn">${E.save} Salva</button>`;
+    if(curCat==="cibo"){
+      const rm=entries.filter(e=>e.category==="cibo").sort((a,b)=>b.timestamp-a.timestamp).slice(0,5);
+      h+=`<div class="recentmeals"><div class="rmtitle">🕓 Ultimi 5 pasti</div>`;
+      if(!rm.length)h+=`<div class="empty">nessun pasto</div>`;
+      else rm.forEach(e=>{h+=`<div class="rmcard"><div class="rmtime">${e.time||""}</div><div class="rmfoods">${eDesc(e)}</div></div>`;});
+      h+=`</div>`;
+    }
+    h+=`</div>`;
+  }
+  return h;
+}
+
+function renderLog(){
+  const s=[...entries].sort((a,b)=>b.timestamp-a.timestamp);
+  if(!s.length)return`<div class="empty" style="text-align:center;padding:20px">Nessuna voce</div>`;
+  let h=`<div class="srb">${s.length} voci totali</div>`;
+  s.forEach(e=>{h+=`<div class="lentry"><div class="ldate">${e.date?fmtD(e.date):""}</div><div class="lrest">${eCardHtml(e)}</div></div>`;});
+  return h;
+}
+
+function changeMonth(d){monthOffset+=d;render();}
+function renderStats(){
+  const mE=entries.filter(e=>inMonth(e.date,monthOffset));
+  const slE=mE.filter(e=>e.category==="sonno"&&e.sleepEnd),pE=mE.filter(e=>e.category==="cacca"),fE=mE.filter(e=>e.category==="cibo"),teE=mE.filter(e=>e.category==="tempo");
+  const slMins=slE.map(e=>sleepMinutes(e.sleepStart,e.sleepEnd));
+  const totSlM=slMins.reduce((a,b)=>a+b,0),avgSlM=slMins.length?totSlM/slMins.length:0;
+  const totSlH=(totSlM/60).toFixed(1),avgH=Math.floor(avgSlM/60),avgM=Math.round(avgSlM%60);
+  const days=new Set(mE.map(e=>e.date).filter(Boolean)).size||1;const ppd=(pE.length/days).toFixed(1);
+  const fc={};fE.forEach(e=>(e.foods||[]).forEach(f=>{fc[f.type]=(fc[f.type]||0)+1;}));
+  const topF=Object.entries(fc).sort((a,b)=>b[1]-a[1]).slice(0,10);const maxF=topF.length?topF[0][1]:1;
+  let tG=0,tN=0,tO=0;teE.forEach(e=>{const t=TIME_T.find(x=>x.id===e.timeType);if(!t)return;if(t.id==="giorno")tG++;else if(t.id==="notte")tN++;else tO+=(Number(e.hours)||0);});
+  const ref=new Date();ref.setMonth(ref.getMonth()+monthOffset);const ml=`${MONTH_NAMES[ref.getMonth()]} ${ref.getFullYear()}`;const isCur=monthOffset===0;
+  let h=`<div class="monthnav"><button class="wkbtn" data-monthnav="-1">${E.back}</button><div class="wklabel">${ml}${isCur?" <span style='font-weight:400;color:var(--text-faint);font-size:11px'>(in corso)</span>":""}</div><button class="wkbtn" data-monthnav="1" ${monthOffset>=0?'style="opacity:.3;pointer-events:none"':""}>${E.fwd}</button></div>`;
+  h+=`<div class="sectiontitle">🍼 Cura quotidiana</div><div class="statgrid">
+    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🌙 Sonno/mese</div><div><div class="sval">${totSlH}${UNITS.sonno}</div><div class="ssub">${slE.length} periodi</div></div></div>
+    <div class="statcard" style="background:#EEEDFE;color:#534AB7"><div class="slabel">🕐 Media sonno</div><div><div class="sval">${avgH}h ${avgM}m</div><div class="ssub">per periodo</div></div></div>
+    <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">💩 Cacca/mese</div><div><div class="sval">${pE.length}</div><div class="ssub">volte</div></div></div>
+    <div class="statcard" style="background:#FAECE7;color:#993C1D"><div class="slabel">📊 Cacca/giorno</div><div><div class="sval">${ppd}</div><div class="ssub">media</div></div></div>
+  </div>`;
+  h+=`<div class="sectiontitle">⏰ Tempo</div><div style="background:var(--color-background-secondary);border-radius:10px;padding:4px 12px;margin-bottom:20px">
+    <div class="exline"><div class="exicowrap" style="background:#FDF0E3">⏱️</div><div><div class="exlabel">Ore</div></div><div class="exvalue">${tO} <span>${UNITS.tempo}</span></div></div>
+    <div class="exline"><div class="exicowrap" style="background:#FFF3E0">☀️</div><div><div class="exlabel">Giorni</div></div><div class="exvalue">${tG} <span>gg</span></div></div>
+    <div class="exline"><div class="exicowrap" style="background:#EEEDFE">🌜</div><div><div class="exlabel">Notti</div></div><div class="exvalue">${tN} <span>not.</span></div></div>
+  </div>`;
+  h+=`<div class="sectiontitle">🍎 Top 10 alimenti</div><div>`;
+  if(!topF.length)h+=`<div class="empty">nessun dato</div>`;
+  else topF.forEach(([n,c],i)=>{h+=`<div class="foodrank"><div class="frnum">${i+1}</div><div class="frbar-wrap"><div class="frname">${esc(n)}<b>${c}×</b></div><div class="frbar-bg"><div class="frbar-fill" style="width:${(c/maxF)*100}%"></div></div></div></div>`;});
+  h+=`</div>`;return h;
+}
+
+function addCustomFood(){const v=newFoodName.trim();if(!v)return;if(!FOOD_T.includes(v))FOOD_T.push(v);newFoodName="";saveSettings();render();}
+function removeFood(n){FOOD_T=FOOD_T.filter(f=>f!==n);saveSettings();render();}
+function renderLogSet(){
+  let h=`<div class="setsec"><div class="sethdr">🍎 Alimenti personalizzati</div><div class="setsub">Aggiungi o rimuovi tipologie Cibo</div><div class="foodtaglist">`;
+  sortedFoods().forEach(f=>{h+=`<span class="foodtag">${esc(f)}<button data-rmvfoodtype="${esc(f)}">✕</button></span>`;});
+  h+=`</div><div class="addfoodrow"><input type="text" id="newFoodInput" placeholder="es. Minestrone..." value="${esc(newFoodName)}"><button id="addFoodTypeBtn">＋</button></div></div>`;
+  h+=`<div style="border-top:1px solid var(--color-border-tertiary);margin:20px 0;padding-top:16px"><div class="sethdr" style="margin-bottom:12px">📋 Activity Log</div></div>`;
+  h+=renderLog();
+  return h;
+}
+
+function render(){
+  const mc=document.getElementById("mainContent");
+  if(curTab==="registra")mc.innerHTML=renderRegister();
+  else if(curTab==="oggi")mc.innerHTML=renderToday();
+  else if(curTab==="agenda")mc.innerHTML=renderAgenda();
+  else if(curTab==="stats")mc.innerHTML=renderStats();
+  else mc.innerHTML=renderLogSet();
+  attachEvents();renderApptModal();renderSleepModal();renderEditModal();
+}
+
+function attachEvents(){
+  const mc=document.getElementById("mainContent");
+  mc.querySelectorAll("[data-del]").forEach(el=>el.addEventListener("click",()=>deleteEntry(el.dataset.del)));
+  mc.querySelectorAll("[data-edit]").forEach(el=>el.addEventListener("click",()=>openEdit(el.dataset.edit)));
+  mc.querySelectorAll("[data-selcat]").forEach(el=>el.addEventListener("click",()=>selectCat(el.dataset.selcat)));
+  mc.querySelectorAll("[data-upd]").forEach(el=>el.addEventListener("change",()=>upd(el.dataset.upd,el.value)));
+  mc.querySelectorAll("[data-poop]").forEach(el=>el.addEventListener("click",()=>{upd("poopType",el.dataset.poop);render();}));
+  mc.querySelectorAll("[data-timetype]").forEach(el=>el.addEventListener("click",()=>selectTimeType(el.dataset.timetype)));
+  mc.querySelectorAll("[data-sleeptype]").forEach(el=>el.addEventListener("click",()=>selectSleepType(el.dataset.sleeptype)));
+  mc.querySelectorAll("[data-updfood-i]").forEach(el=>el.addEventListener("change",()=>updFood(Number(el.dataset.updfoodI),el.dataset.updfoodK,el.value)));
+  mc.querySelectorAll("[data-rmvfood]").forEach(el=>el.addEventListener("click",()=>removeFoodItem(Number(el.dataset.rmvfood))));
+  mc.querySelectorAll("[data-weeknav]").forEach(el=>el.addEventListener("click",()=>changeWeek(Number(el.dataset.weeknav))));
+  mc.querySelectorAll("[data-monthnav]").forEach(el=>el.addEventListener("click",()=>changeMonth(Number(el.dataset.monthnav))));
+  mc.querySelectorAll("[data-delappt]").forEach(el=>el.addEventListener("click",()=>deleteAppt(el.dataset.delappt)));
+  mc.querySelectorAll("[data-rmvfoodtype]").forEach(el=>el.addEventListener("click",()=>removeFood(el.dataset.rmvfoodtype)));
+  mc.querySelectorAll("[data-addend]").forEach(el=>el.addEventListener("click",()=>openSleepEnd(el.dataset.addend)));
+  mc.querySelectorAll("[data-toggle-time]").forEach(el=>el.addEventListener("change",()=>toggleTime()));
+  const a=document.getElementById("addFoodBtn");if(a)a.addEventListener("click",addFoodItem);
+  const s=document.getElementById("submitBtn");if(s)s.addEventListener("click",submitEntry);
+  const ap=document.getElementById("addApptBtn");if(ap)ap.addEventListener("click",openApptModal);
+  const ni=document.getElementById("newFoodInput");if(ni)ni.addEventListener("input",e=>newFoodName=e.target.value);
+  const af=document.getElementById("addFoodTypeBtn");if(af)af.addEventListener("click",addCustomFood);
+}
+
+// INIT - aspetta che il DOM sia pronto
+function initApp(){
+  // Crea il div per il modal di edit se non esiste
+  if(!document.getElementById("editModalRoot")){
+    const r=document.createElement("div");
+    r.id="editModalRoot";
+    document.body.appendChild(r);
+  }
+  
+  // Aggiungi listener ai tab
+  TABS.forEach(t=>{
+    const btn=document.getElementById("tab-"+t);
+    if(btn)btn.addEventListener("click",()=>switchTab(t));
+  });
+  
+  // Aggiorna data
+  const todayEl=document.getElementById("todayDate");
+  if(todayEl)todayEl.textContent=new Date().toLocaleDateString("it-IT",{weekday:"long",day:"numeric",month:"long"});
+  
+  // Primo render
+  render();
+}
+
+// Aspetta il DOM se necessario
+if(document.readyState==="loading"){
+  document.addEventListener("DOMContentLoaded",initApp);
+}else{
+  initApp();
+}
+</script>
+</body>
+</html>

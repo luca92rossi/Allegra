@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Allegra APP">
+<meta name="apple-mobile-web-app-title" content="Allegra">
 <meta name="theme-color" content="#D4537E">
 <title>Allegra · Diario</title>
 <link rel="icon" href="icon.png">
@@ -250,7 +250,7 @@ const PERIODS=[
 ];
 let UNITS={cibo:"g",sonno:"h",tempo:"h"};
 let entries=[],appointments=[];
-let curTab="registra",curCat=null,formState={},weekOffset=0,monthOffset=0,dayOffset=0,apptForm=null,newFoodName="",firstSnap=false,editingEntry=null,editForm=null;
+let curTab="registra",curCat=null,formState={},weekOffset=0,monthOffset=0,dayOffset=0,agendaShowCibo=false,apptForm=null,newFoodName="",firstSnap=false,editingEntry=null,editForm=null;
 
 // ===== DATE HELPERS =====
 function localISO(d){
@@ -491,23 +491,32 @@ function renderAgenda(){
   const label=weekOffset===0?"Questa settimana":(weekOffset===1?"Prossima":(weekOffset===-1?"Scorsa":(weekOffset>0?"Tra "+weekOffset+" sett.":Math.abs(weekOffset)+" sett. fa")));
   const sub=`${start.toLocaleDateString("it-IT",{day:"numeric",month:"short"})} – ${end.toLocaleDateString("it-IT",{day:"numeric",month:"short",year:"numeric"})}`;
   let h=`<div class="weeknav"><button class="wkbtn" data-weeknav="-1">${E.back}</button><div><div class="wklabel">${label}</div><div class="wksub">${sub}</div></div><button class="wkbtn" data-weeknav="1">${E.fwd}</button></div>`;
+  h+=`<div style="display:flex;gap:8px;margin-bottom:14px"><button class="ptag${!agendaShowCibo?" on":""}" data-agendafilter="default">📅 Agenda</button><button class="ptag${agendaShowCibo?" on":""}" data-agendafilter="cibo">🍎 Cibo</button></div>`;
   for(let i=0;i<7;i++){
     const d=new Date(start);d.setDate(d.getDate()+i);
     const iso=fmtISO(d);const isT=iso===tISO;
-    const dA=appointments.filter(a=>a.date===iso).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-    const dS=entries.filter(e=>e.category==="spesa"&&e.date===iso);
-    const dN=entries.filter(e=>e.category==="nota"&&e.date===iso);
-    const hasAny=dA.length||dS.length||dN.length;
     h+=`<div class="daycol${isT?" today":""}"><div class="dayhdr"><span>${DAY_NAMES[i]}</span><span style="font-weight:400;opacity:.75">${d.toLocaleDateString("it-IT",{day:"numeric",month:"short"})}${isT?" · oggi":""}</span></div>`;
-    if(!hasAny)h+=`<div class="empty">---</div>`;
-    else{
-      dA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div><button class="dbtn" data-delappt="${a.id}">${E.del}</button></div>`);
-      dN.forEach(e=>h+=`<div class="apptext" style="background:#F1EFE8;color:#5F5E5A">📝 ${esc(e.description||e.note||"Nota")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
-      dS.forEach(e=>h+=`<div class="apptext" style="background:#E8F5E0;color:#3D7A1C">🛒 ${e.note?esc(e.note):"Spesa"}</div>`);
+    if(agendaShowCibo){
+      const dC=entries.filter(e=>e.category==="cibo"&&e.date===iso).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+      if(!dC.length)h+=`<div class="empty">---</div>`;
+      else dC.forEach(e=>{const desc=e.foods?e.foods.map(f=>f.type+(f.grams?" "+f.grams+"g":"")).join(", "):"";h+=`<div class="apptext" style="background:#FAEEDA;color:#854F0B">🍎 ${e.time?e.time+" · ":""}${desc}</div>`;});
+    } else {
+      const dA=appointments.filter(a=>a.date===iso).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
+      const dV=entries.filter(e=>e.category==="visita"&&e.date===iso);
+      const dS=entries.filter(e=>e.category==="spesa"&&e.date===iso);
+      const dN=entries.filter(e=>e.category==="nota"&&e.date===iso);
+      const hasAny=dA.length||dV.length||dS.length||dN.length;
+      if(!hasAny)h+=`<div class="empty">---</div>`;
+      else{
+        dA.forEach(a=>h+=`<div class="appt"><div class="appttime">${a.time}</div><div class="apptname">${esc(a.title)}</div><button class="dbtn" data-delappt="${a.id}">${E.del}</button></div>`);
+        dV.forEach(e=>h+=`<div class="apptext" style="background:#E1F5EE;color:#0F6E56">🩺 ${esc(e.visitType||"Visita")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
+        dN.forEach(e=>h+=`<div class="apptext" style="background:#F1EFE8;color:#5F5E5A">📝 ${esc(e.description||e.note||"Nota")}${e.showTime&&e.time?" · "+e.time:""}</div>`);
+        dS.forEach(e=>h+=`<div class="apptext" style="background:#E8F5E0;color:#3D7A1C">🛒 ${e.note?esc(e.note):"Spesa"}</div>`);
+      }
     }
     h+=`</div>`;
   }
-  h+=`<button class="addapptbtn" id="addApptBtn">＋ Aggiungi impegno</button>`;
+  if(!agendaShowCibo)h+=`<button class="addapptbtn" id="addApptBtn">＋ Aggiungi impegno</button>`;
   return h;
 }
 
@@ -593,8 +602,8 @@ function renderRegister(){
     if(curCat==="nota")h+=`<div class="frow"><label class="flbl">Note aggiuntive</label><textarea data-upd="note" placeholder="Dettagli...">${esc(formState.note||"")}</textarea></div>`;
     h+=`<button class="sbtn" style="background:${c.bg};color:${c.col}" id="submitBtn">${E.save} Salva</button>`;
     if(curCat==="cibo"){
-      const rm=entries.filter(e=>e.category==="cibo").sort((a,b)=>b.timestamp-a.timestamp).slice(0,5);
-      h+=`<div class="recentmeals"><div class="rmtitle">🕓 Ultimi 5 pasti</div>`;
+      const rm=entries.filter(e=>e.category==="cibo").sort((a,b)=>b.timestamp-a.timestamp).slice(0,10);
+      h+=`<div class="recentmeals"><div class="rmtitle">🕓 Ultimi 10 pasti</div>`;
       if(!rm.length)h+=`<div class="empty">nessun pasto</div>`;
       else rm.forEach(e=>{h+=`<div class="rmcard"><div class="rmtime">${e.time||""}</div><div class="rmfoods">${eDesc(e)}</div></div>`;});
       h+=`</div>`;
@@ -627,7 +636,7 @@ function renderStats(){
   const totPisH=(totPisM/60).toFixed(1),avgPisH=Math.floor(avgPisM/60),avgPisMn=Math.round(avgPisM%60);
   const days=new Set(mE.map(e=>e.date).filter(Boolean)).size||1;const ppd=(pE.length/days).toFixed(1);
   const fc={};fE.forEach(e=>(e.foods||[]).forEach(f=>{fc[f.type]=(fc[f.type]||0)+1;}));
-  const topF=Object.entries(fc).sort((a,b)=>b[1]-a[1]).slice(0,10);const maxF=topF.length?topF[0][1]:1;
+  const topF=Object.entries(fc).filter(([n])=>n.toLowerCase()!=="latte formulato").sort((a,b)=>b[1]-a[1]).slice(0,10);const maxF=topF.length?topF[0][1]:1;
   let tG=0,tN=0,tO=0;teE.forEach(e=>{const t=TIME_T.find(x=>x.id===e.timeType);if(!t)return;if(t.id==="giorno")tG++;else if(t.id==="notte")tN++;else tO+=(Number(e.hours)||0);});
   const ref=new Date();ref.setMonth(ref.getMonth()+monthOffset);const ml=`${MONTH_NAMES[ref.getMonth()]} ${ref.getFullYear()}`;const isCur=monthOffset===0;
   let h=`<div class="monthnav"><button class="wkbtn" data-monthnav="-1">${E.back}</button><div class="wklabel">${ml}${isCur?" <span style='font-weight:400;color:var(--text-faint);font-size:11px'>(in corso)</span>":""}</div><button class="wkbtn" data-monthnav="1" ${monthOffset>=0?'style="opacity:.3;pointer-events:none"':""}>${E.fwd}</button></div>`;
@@ -687,6 +696,7 @@ function attachEvents(){
   mc.querySelectorAll("[data-updfood-i]").forEach(el=>el.addEventListener("change",()=>updFood(Number(el.dataset.updfoodI),el.dataset.updfoodK,el.value)));
   mc.querySelectorAll("[data-rmvfood]").forEach(el=>el.addEventListener("click",()=>removeFoodItem(Number(el.dataset.rmvfood))));
   mc.querySelectorAll("[data-weeknav]").forEach(el=>el.addEventListener("click",()=>changeWeek(Number(el.dataset.weeknav))));
+  mc.querySelectorAll("[data-agendafilter]").forEach(el=>el.addEventListener("click",()=>{agendaShowCibo=el.dataset.agendafilter==="cibo";render();}));
   mc.querySelectorAll("[data-daynav]").forEach(el=>el.addEventListener("click",()=>changeDay(Number(el.dataset.daynav))));
   mc.querySelectorAll("[data-daytoday]").forEach(el=>el.addEventListener("click",()=>{dayOffset=0;render();}));
   mc.querySelectorAll("[data-monthnav]").forEach(el=>el.addEventListener("click",()=>changeMonth(Number(el.dataset.monthnav))));

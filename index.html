@@ -294,8 +294,20 @@ function fmtDayLabel(iso){
 function ensureDate(e){
   if(!e.date&&e.timestamp){
     e.date=isoOfTs(e.timestamp);
-    // Salva il date calcolato su Firestore in background (non aspettare)
     updateEntry(e.id,{date:e.date}).catch(err=>console.log("Migrazione date fallita:",err));
+  }
+  // Migrazione pisolini: sleepEndDate deve essere uguale a date
+  if(e.category==="sonno"&&e.sleepType==="pisolino"&&e.date){
+    if(!e.sleepEndDate||e.sleepEndDate!==e.date){
+      e.sleepEndDate=e.date;
+      updateEntry(e.id,{sleepEndDate:e.date}).catch(err=>console.log("Migrazione pisolino:",err));
+    }
+  }
+  // Migrazione notturno: se non ha sleepEndDate, imposta giorno dopo
+  if(e.category==="sonno"&&e.sleepType==="notturno"&&e.date&&!e.sleepEndDate){
+    const nd=new Date(e.date);nd.setDate(nd.getDate()+1);
+    e.sleepEndDate=localISO(nd);
+    updateEntry(e.id,{sleepEndDate:e.sleepEndDate}).catch(err=>console.log("Migrazione notturno:",err));
   }
   return e;
 }
@@ -368,14 +380,13 @@ let sleepEndForm=null;
 function openSleepEnd(id){
   const entry=entries.find(e=>e.id===id);
   const isNot=entry&&entry.sleepType==="notturno";
-  const nd=new Date();if(isNot)nd.setDate(nd.getDate());
-  sleepEndForm={id,time:nowTStr(),date:localISO(nd),isNotturno:isNot};
+  const defaultDate=isNot?todayISO():(entry?entry.date:todayISO());
+  sleepEndForm={id,time:nowTStr(),date:defaultDate,isNotturno:isNot};
   renderSleepModal();
 }
 function closeSleepEnd(){sleepEndForm=null;renderSleepModal();}
 async function confirmSleepEnd(){
-  const updates={sleepEnd:sleepEndForm.time};
-  if(sleepEndForm.isNotturno)updates.sleepEndDate=sleepEndForm.date;
+  const updates={sleepEnd:sleepEndForm.time,sleepEndDate:sleepEndForm.date};
   try{await updateEntry(sleepEndForm.id,updates);showToast("Aggiornato");}catch(e){console.error(e);}
   sleepEndForm=null;renderSleepModal();
 }
@@ -414,11 +425,7 @@ function renderEditModal(){
   }
   if(editForm.category==="sonno"){
     h+=`<div class="frow"><label class="flbl">Tipo</label><div style="display:flex;gap:8px;flex-wrap:wrap">${SLEEP_T.map(t=>`<button style="padding:10px 14px;border-radius:20px;border:0.5px solid var(--border);font-size:14px;cursor:pointer;background:${editForm.sleepType===t.id?"#EEEDFE":"var(--surface)"};color:${editForm.sleepType===t.id?"#534AB7":"var(--text-soft)"};font-weight:500;font-family:inherit" data-editsleeptype="${t.id}">${t.label}</button>`).join("")}</div></div>`;
-    if(editForm.sleepType==="notturno"){
-      h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Data inizio</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date"></div><div><label class="flbl">Data fine</label><input type="date" value="${editForm.sleepEndDate||editForm.date||todayISO()}" data-editupd="sleepEndDate"></div></div>`;
-    } else {
-      h+=`<div class="frow"><label class="flbl">Data</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date" style="max-width:170px"></div>`;
-    }
+    h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Data inizio</label><input type="date" value="${editForm.date||todayISO()}" data-editupd="date"></div><div><label class="flbl">Data fine</label><input type="date" value="${editForm.sleepEndDate||editForm.date||todayISO()}" data-editupd="sleepEndDate"></div></div>`;
     h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="flbl">Ora inizio</label><input type="time" value="${editForm.sleepStart||""}" data-editupd="sleepStart" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div><div><label class="flbl">Ora fine</label><input type="time" value="${editForm.sleepEnd||""}" data-editupd="sleepEnd" style="padding:12px;border:0.5px solid var(--border);border-radius:10px;font-family:inherit"></div></div>`;
   }
   if(editForm.category==="cacca"){
@@ -433,7 +440,12 @@ function renderEditModal(){
   document.querySelectorAll("[data-editupd]").forEach(el=>el.addEventListener("change",e=>{editForm[el.dataset.editupd]=e.target.value;}));
   document.querySelectorAll("[data-editfood]").forEach(el=>el.addEventListener("change",e=>{const i=Number(el.dataset.editfood);const k=el.dataset.editfoodkey;editForm.foods[i][k]=e.target.value;}));
   document.querySelectorAll("[data-rmveditfood]").forEach(el=>el.addEventListener("click",()=>{const i=Number(el.dataset.rmveditfood);if(editForm.foods.length>1)editForm.foods.splice(i,1);renderEditModal();}));
-  document.querySelectorAll("[data-editsleeptype]").forEach(el=>el.addEventListener("click",()=>{editForm.sleepType=el.dataset.editsleeptype;renderEditModal();}));
+  document.querySelectorAll("[data-editsleeptype]").forEach(el=>el.addEventListener("click",()=>{
+    editForm.sleepType=el.dataset.editsleeptype;
+    if(el.dataset.editsleeptype==="pisolino"){editForm.sleepEndDate=editForm.date||todayISO();}
+    else{const nd=new Date(editForm.date||todayISO());nd.setDate(nd.getDate()+1);editForm.sleepEndDate=localISO(nd);}
+    renderEditModal();
+  }));
   document.querySelectorAll("[data-editpoop]").forEach(el=>el.addEventListener("click",()=>{editForm.poopType=el.dataset.editpoop;renderEditModal();}));
   document.getElementById("addEditFood")?.addEventListener("click",()=>{editForm.foods.push({type:sortedFoods()[0],grams:""});renderEditModal();});
   document.getElementById("editCancel").addEventListener("click",closeEdit);
@@ -448,7 +460,7 @@ function switchTab(t){curTab=t;if(t==="oggi")dayOffset=0;TABS.forEach(k=>{docume
 function selectCat(c){
   curCat=c;const n=nowTStr();const d=todayISO();
   if(c==="cibo")formState={date:d,time:n,foods:[{type:sortedFoods()[0],grams:""}],note:""};
-  else if(c==="sonno"){const nd=new Date();nd.setDate(nd.getDate()+1);formState={date:d,sleepEndDate:localISO(nd),sleepType:"pisolino",sleepStart:n,sleepEnd:"",note:""};}
+  else if(c==="sonno"){formState={date:d,sleepEndDate:d,sleepType:"pisolino",sleepStart:n,sleepEnd:"",note:""};}
   else if(c==="cacca")formState={date:d,time:n,poopType:POOP_T[0],note:""};
   else if(c==="visita")formState={date:d,showTime:false,time:n,visitType:VISIT_T[0],note:""};
   else if(c==="malattia")formState={date:d,showTime:false,time:n,illnessType:ILL_T[0],temp:"",note:""};
@@ -464,7 +476,12 @@ function updFood(i,k,v){formState.foods[i][k]=v;}
 function upd(k,v){formState[k]=v;}
 function toggleTime(){formState.showTime=!formState.showTime;render();}
 function selectTimeType(id){formState.timeType=id;render();}
-function selectSleepType(id){formState.sleepType=id;render();}
+function selectSleepType(id){
+  formState.sleepType=id;
+  if(id==="pisolino"){formState.sleepEndDate=formState.date||todayISO();}
+  else{const nd=new Date(formState.date||todayISO());nd.setDate(nd.getDate()+1);formState.sleepEndDate=localISO(nd);}
+  render();
+}
 function submitEntry(){
   const entry={timestamp:Date.now(),category:curCat,...formState};
   saveEntry(entry);
